@@ -356,4 +356,363 @@
 
     </script>
 </body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Direct Save Camera</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            font-family: sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #video-feed {
+            width: 100%;
+            height: 100vh;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        .pulse-record { animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+        /* Spinners */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-left-color: #eab308;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Disable text selection */
+        * { -webkit-user-select: none; user-select: none; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col relative">
+
+    <!-- SAVING OVERLAY (Jab tak file save na ho jaye) -->
+    <div id="saving-overlay" class="absolute inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200">
+        <div class="loader w-12 h-12 mb-4 border-green-500"></div>
+        <h3 class="text-xl font-bold text-white">Saving Directly...</h3>
+        <p id="save-path-display" class="text-sm text-gray-400 mt-1">Writing to Storage</p>
+    </div>
+
+    <video id="video-feed" autoplay playsinline muted></video>
+
+    <!-- Top Bar -->
+    <div class="absolute top-0 left-0 right-0 p-4 z-30 flex justify-between items-start bg-gradient-to-b from-black/90 to-transparent">
+        
+        <!-- STORAGE BUTTON (Red = Danger/Not Connected, Green = Ready) -->
+        <button onclick="selectStorage()" id="storage-btn" class="flex items-center gap-3 bg-red-600/90 border-2 border-red-400 px-4 py-2.5 rounded-full active:scale-95 transition shadow-xl animate-pulse">
+            <i id="storage-icon" data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
+            <div class="flex flex-col items-start">
+                <span class="text-[9px] text-white/80 uppercase tracking-wider font-bold">STEP 1: CONNECT USB</span>
+                <span id="storage-name" class="text-xs font-black text-white truncate max-w-[120px]">Not Connected</span>
+            </div>
+        </button>
+
+        <!-- Stats Badge -->
+        <div class="flex flex-col items-end px-3 py-1 bg-black/60 rounded-lg border border-white/10 backdrop-blur-md">
+            <span id="real-res" class="text-xs font-bold text-yellow-400 font-mono">AUTO</span>
+            <span id="real-fps" class="text-[10px] text-gray-300 font-mono">-- FPS</span>
+        </div>
+    </div>
+
+    <!-- Mode Notification -->
+    <div id="mode-badge" class="absolute top-24 left-1/2 transform -translate-x-1/2 bg-yellow-500/90 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg z-20 opacity-0 transition-opacity pointer-events-none">
+        High Res Photo Mode
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="absolute bottom-0 w-full pb-8 pt-24 bg-gradient-to-t from-black via-black/80 to-transparent z-20 flex flex-col items-center gap-6">
+        
+        <!-- Mode Toggle Switch -->
+        <div class="flex bg-gray-900/90 p-1 rounded-full border border-gray-700 relative w-52 shadow-2xl backdrop-blur">
+            <div id="mode-bg" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-full transition-transform duration-300 shadow-md"></div>
+            <button onclick="setMode('photo')" class="flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide" id="txt-photo">PHOTO</button>
+            <button onclick="setMode('video')" class="flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-gray-500" id="txt-video">VIDEO</button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-around w-full px-6">
+            <!-- Preview Thumbnail -->
+            <div class="w-14 h-14 bg-gray-800 rounded-2xl overflow-hidden border-2 border-gray-600 relative shadow-lg">
+                <img id="preview-img" class="w-full h-full object-cover hidden">
+            </div>
+
+            <!-- Shutter Buttons -->
+            <div class="relative">
+                <!-- Photo Shutter -->
+                <button id="btn-shutter-photo" onclick="capturePhoto()" class="w-20 h-20 rounded-full border-[5px] border-white flex items-center justify-center active:scale-90 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                    <div class="w-16 h-16 bg-white rounded-full shadow-inner"></div>
+                </button>
+                <!-- Video Shutter -->
+                <button id="btn-shutter-video" onclick="toggleVideo()" class="hidden w-20 h-20 rounded-full border-[5px] border-white flex items-center justify-center active:scale-90 transition shadow-[0_0_20px_rgba(220,38,38,0.5)]">
+                    <div id="rec-dot" class="w-16 h-16 bg-red-600 rounded-full transition-all duration-300 shadow-inner"></div>
+                </button>
+            </div>
+
+            <!-- Flip Camera -->
+            <button onclick="flipCamera()" class="w-14 h-14 bg-gray-800/80 rounded-full flex items-center justify-center border border-gray-600 active:rotate-180 transition duration-500 backdrop-blur">
+                <i data-lucide="refresh-ccw" class="w-6 h-6 text-white"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/90 text-white px-6 py-4 rounded-2xl border border-gray-700 opacity-0 pointer-events-none transition z-50 flex items-center gap-3 shadow-2xl">
+        <i id="t-icon" data-lucide="check-circle" class="w-6 h-6 text-green-500"></i>
+        <div>
+            <p id="t-msg" class="font-bold text-sm">Saved</p>
+            <p id="t-sub" class="text-[10px] text-gray-400">File System Access</p>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // --- CONFIGURATION ---
+        let stream = null;
+        let mediaRecorder = null;
+        let chunks = [];
+        let isRecording = false;
+        let mode = 'photo';
+        let facingMode = 'environment';
+        let directoryHandle = null; 
+
+        // --- DOM ELEMENTS ---
+        const video = document.getElementById('video-feed');
+        const savingOverlay = document.getElementById('saving-overlay');
+        const storageBtn = document.getElementById('storage-btn');
+        const storageName = document.getElementById('storage-name');
+        const storageIcon = document.getElementById('storage-icon');
+        const savePathDisplay = document.getElementById('save-path-display');
+
+        // --- 1. START CAMERA & AUTO-TUNE ---
+        async function startCamera() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+
+            let constraints = { audio: true, video: { facingMode: facingMode } };
+
+            // AUTO SETTINGS LOGIC
+            if (mode === 'photo') {
+                // Request 4K for Photos
+                constraints.video.width = { ideal: 4096 }; 
+                constraints.video.height = { ideal: 2160 };
+            } else {
+                // Request 1080p 60FPS for Video
+                constraints.video.width = { ideal: 1920 };
+                constraints.video.height = { ideal: 1080 };
+                constraints.video.frameRate = { ideal: 60 };
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                video.onloadedmetadata = () => { setTimeout(analyzeStream, 500); };
+                video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+            } catch (err) { 
+                alert("Camera Start Failed. Refresh Page."); 
+            }
+        }
+
+        function analyzeStream() {
+            const track = stream.getVideoTracks()[0];
+            const settings = track.getSettings();
+            const fps = settings.frameRate ? Math.round(settings.frameRate) : 30;
+            const h = settings.height;
+            
+            // Update Visual Stats
+            const resText = h >= 2100 ? "4K UHD" : (h >= 1000 ? "1080p" : "720p");
+            document.getElementById('real-res').innerText = resText;
+            document.getElementById('real-fps').innerText = fps + " FPS";
+            
+            // Color Coding
+            document.getElementById('real-res').className = mode==='photo' ? "text-xs font-bold text-yellow-400 font-mono" : "text-xs font-bold text-blue-400 font-mono";
+        }
+
+        // --- 2. DIRECT SAVE SYSTEM (CORE) ---
+        async function selectStorage() {
+            if ('showDirectoryPicker' in window) {
+                try {
+                    const handle = await window.showDirectoryPicker({
+                        id: 'direct_cam_v3',
+                        mode: 'readwrite'
+                    });
+                    directoryHandle = handle;
+                    
+                    // Update UI to GREEN (Ready)
+                    storageName.innerText = handle.name.substring(0, 12);
+                    storageBtn.className = "flex items-center gap-3 bg-green-600/90 border-2 border-green-400 px-4 py-2.5 rounded-full active:scale-95 transition shadow-xl";
+                    storageBtn.querySelector('span').innerText = "STORAGE LINKED";
+                    storageIcon.setAttribute('data-lucide', 'hard-drive');
+                    lucide.createIcons();
+                    
+                    showToast("Connected: " + handle.name, "success");
+                } catch (err) {
+                    console.log("User cancelled");
+                }
+            } else {
+                alert("Browser not supported for Direct Save. Will use Download method.");
+            }
+        }
+
+        async function writeToDisk(blob, filename) {
+            savingOverlay.style.opacity = 1;
+            savePathDisplay.innerText = directoryHandle ? "Writing to: " + directoryHandle.name : "Downloading...";
+            
+            try {
+                if (directoryHandle) {
+                    // --- DIRECT WRITE ---
+                    const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    showToast("Saved to " + directoryHandle.name, "success");
+                } else {
+                    // --- DOWNLOAD FALLBACK ---
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showToast("Saved to Downloads", "warning");
+                }
+            } catch (error) {
+                console.error(error);
+                showToast("Write Error. Check Permissions.", "error");
+            } finally {
+                savingOverlay.style.opacity = 0;
+            }
+        }
+
+        // --- 3. CAPTURE HANDLERS ---
+        async function capturePhoto() {
+            // Flash Effect
+            const flash = document.createElement('div');
+            flash.className = "fixed inset-0 bg-white z-50 opacity-100 transition-opacity duration-150";
+            document.body.appendChild(flash);
+            setTimeout(() => flash.style.opacity = 0, 50);
+            setTimeout(() => flash.remove(), 200);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (facingMode === 'user') { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+            ctx.drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                updatePreview(blob);
+                writeToDisk(blob, `IMG_${Date.now()}.png`);
+            }, 'image/png', 1.0); // Max Quality
+        }
+
+        function toggleVideo() {
+            if (!isRecording) {
+                if (!directoryHandle) {
+                    if(!confirm("No Storage Selected! Video will assume 'Downloads' folder. Continue?")) return;
+                }
+
+                chunks = [];
+                // High Bitrate Recording (12Mbps)
+                const options = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 12000000 };
+                try { mediaRecorder = new MediaRecorder(stream, options); } 
+                catch (e) { mediaRecorder = new MediaRecorder(stream); }
+
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    updatePreview(blob);
+                    writeToDisk(blob, `VID_${Date.now()}.webm`);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                document.getElementById('rec-dot').classList.add('scale-50', 'rounded-md');
+                document.getElementById('btn-shutter-video').classList.add('pulse-record');
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('rec-dot').classList.remove('scale-50', 'rounded-md');
+                document.getElementById('btn-shutter-video').classList.remove('pulse-record');
+            }
+        }
+
+        // --- HELPERS ---
+        function setMode(m) {
+            mode = m;
+            updateUI();
+            startCamera();
+            
+            const badge = document.getElementById('mode-badge');
+            badge.innerText = m === 'photo' ? "MAX RES PHOTO" : "60FPS VIDEO";
+            badge.className = `absolute top-24 left-1/2 transform -translate-x-1/2 ${m==='photo'?'bg-yellow-500':'bg-blue-500'}/90 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg z-20 transition-opacity pointer-events-none`;
+            badge.style.opacity = 1;
+            setTimeout(() => badge.style.opacity = 0, 1500);
+        }
+
+        function updateUI() {
+            const pBtn = document.getElementById('btn-shutter-photo');
+            const vBtn = document.getElementById('btn-shutter-video');
+            const bg = document.getElementById('mode-bg');
+            const tP = document.getElementById('txt-photo');
+            const tV = document.getElementById('txt-video');
+
+            if (mode === 'photo') {
+                bg.style.transform = 'translateX(0)';
+                pBtn.classList.remove('hidden');
+                vBtn.classList.add('hidden');
+                tP.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-black transition-colors";
+                tV.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-gray-500 transition-colors";
+            } else {
+                bg.style.transform = 'translateX(100%)';
+                pBtn.classList.add('hidden');
+                vBtn.classList.remove('hidden');
+                tP.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-gray-500 transition-colors";
+                tV.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-black transition-colors";
+            }
+        }
+
+        function updatePreview(blob) {
+            const url = URL.createObjectURL(blob);
+            const img = document.getElementById('preview-img');
+            img.src = url;
+            img.classList.remove('hidden');
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            const i = document.getElementById('t-icon');
+            document.getElementById('t-msg').innerText = msg;
+            
+            i.className = type === 'success' ? "w-6 h-6 text-green-500" : (type === 'warning' ? "w-6 h-6 text-yellow-500" : "w-6 h-6 text-red-500");
+            i.setAttribute('data-lucide', type === 'success' ? "check-circle" : "alert-triangle");
+            lucide.createIcons();
+            
+            t.style.opacity = 1;
+            setTimeout(() => t.style.opacity = 0, 3000);
+        }
+
+        function flipCamera() {
+            facingMode = facingMode === 'user' ? 'environment' : 'user';
+            startCamera();
+        }
+
+        startCamera();
+    </script>
+</body>
 </html>
