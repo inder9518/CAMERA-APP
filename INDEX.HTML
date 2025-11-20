@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Camera (Real FPS)</title>
+    <title>Smart Auto Camera</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -26,10 +26,6 @@
             70% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
             100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
-        dialog::backdrop {
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(4px);
-        }
         /* Loading Spinner */
         .loader {
             border: 3px solid rgba(255,255,255,0.1);
@@ -44,10 +40,10 @@
 </head>
 <body class="h-screen w-screen flex flex-col relative">
 
-    <!-- Loading Overlay -->
+    <!-- Loading Overlay (Switching Modes) -->
     <div id="loader-overlay" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center transition-opacity duration-300 pointer-events-none opacity-0">
         <div class="loader w-10 h-10 mb-2"></div>
-        <span class="text-xs text-gray-400">Configuring Camera...</span>
+        <span id="loader-text" class="text-xs text-gray-400">Optimizing Lens...</span>
     </div>
 
     <video id="video-feed" autoplay playsinline muted></video>
@@ -63,24 +59,24 @@
             </div>
         </button>
 
-        <!-- Real Stats Display -->
-        <div class="flex gap-2">
-            <div onclick="openSettings()" class="flex flex-col items-end px-3 py-1 bg-black/60 rounded-lg border border-white/10 cursor-pointer active:bg-gray-800">
-                <span id="real-res" class="text-xs font-bold text-yellow-400 font-mono">LOADING</span>
-                <span id="real-fps" class="text-[10px] text-green-400 font-mono">-- FPS</span>
-            </div>
-            <button onclick="openSettings()" class="p-2 bg-gray-800 rounded-full border border-gray-600 hover:bg-gray-700">
-                <i data-lucide="settings-2" class="w-5 h-5 text-white"></i>
-            </button>
+        <!-- Live Stats Display (Auto) -->
+        <div class="flex flex-col items-end px-3 py-1 bg-black/60 rounded-lg border border-white/10">
+            <span id="real-res" class="text-xs font-bold text-yellow-400 font-mono">AUTO</span>
+            <span id="real-fps" class="text-[10px] text-gray-300 font-mono">-- FPS</span>
         </div>
+    </div>
+
+    <!-- Mode Badge (Shows what mode is active) -->
+    <div id="mode-badge" class="absolute top-20 left-1/2 transform -translate-x-1/2 bg-yellow-500/90 text-black px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-lg z-20 transition-opacity duration-500 opacity-0">
+        High Res Photo Mode
     </div>
 
     <!-- Bottom Controls -->
     <div class="absolute bottom-0 w-full pb-8 pt-24 bg-gradient-to-t from-black via-black/80 to-transparent z-20 flex flex-col items-center gap-6">
         
         <!-- Mode Toggle -->
-        <div class="flex bg-gray-900 p-1 rounded-full border border-gray-700 relative w-48">
-            <div id="mode-bg" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-yellow-500 rounded-full transition-transform duration-300"></div>
+        <div class="flex bg-gray-900 p-1 rounded-full border border-gray-700 relative w-48 shadow-xl">
+            <div id="mode-bg" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-full transition-transform duration-300"></div>
             <button onclick="setMode('photo')" class="flex-1 relative z-10 text-xs font-bold py-2 text-center transition-colors" id="txt-photo">PHOTO</button>
             <button onclick="setMode('video')" class="flex-1 relative z-10 text-xs font-bold py-2 text-center text-gray-400 transition-colors" id="txt-video">VIDEO</button>
         </div>
@@ -94,10 +90,10 @@
 
             <!-- Shutter -->
             <div class="relative">
-                <button id="btn-shutter-photo" onclick="capturePhoto()" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-90 transition">
+                <button id="btn-shutter-photo" onclick="capturePhoto()" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-90 transition shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                     <div class="w-16 h-16 bg-white rounded-full"></div>
                 </button>
-                <button id="btn-shutter-video" onclick="toggleVideo()" class="hidden w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-90 transition">
+                <button id="btn-shutter-video" onclick="toggleVideo()" class="hidden w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-90 transition shadow-[0_0_15px_rgba(220,38,38,0.4)]">
                     <div id="rec-dot" class="w-16 h-16 bg-red-600 rounded-full transition-all duration-300"></div>
                 </button>
             </div>
@@ -108,34 +104,6 @@
             </button>
         </div>
     </div>
-
-    <!-- Settings Modal -->
-    <dialog id="settings-modal" class="bg-gray-900 text-white rounded-2xl w-80 p-0 shadow-2xl overflow-hidden border border-gray-700">
-        <div class="p-4 bg-gray-800 border-b border-gray-700 flex justify-between items-center">
-            <span class="font-bold flex items-center gap-2"><i data-lucide="sliders" class="w-4 h-4 text-yellow-500"></i> Settings</span>
-            <button onclick="document.getElementById('settings-modal').close()" class="p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-        <div class="p-5 space-y-6">
-            <!-- Resolution -->
-            <div>
-                <div class="text-xs text-gray-400 font-bold mb-2 uppercase">Resolution (Quality)</div>
-                <div class="grid grid-cols-3 gap-2">
-                    <button onclick="applySettings('4k', currentFps)" id="btn-4k" class="p-2 text-xs font-bold bg-gray-700 rounded border border-gray-600 hover:bg-gray-600">4K UHD</button>
-                    <button onclick="applySettings('1080p', currentFps)" id="btn-1080p" class="p-2 text-xs font-bold bg-yellow-500 text-black rounded border border-yellow-600">1080p</button>
-                    <button onclick="applySettings('720p', currentFps)" id="btn-720p" class="p-2 text-xs font-bold bg-gray-700 rounded border border-gray-600 hover:bg-gray-600">720p</button>
-                </div>
-            </div>
-            <!-- FPS -->
-            <div>
-                <div class="text-xs text-gray-400 font-bold mb-2 uppercase">Target FPS (Smoothness)</div>
-                <div class="flex gap-2">
-                    <button onclick="applySettings(currentRes, 30)" id="btn-30fps" class="flex-1 p-2 text-xs font-bold bg-yellow-500 text-black rounded border border-yellow-600">30 FPS</button>
-                    <button onclick="applySettings(currentRes, 60)" id="btn-60fps" class="flex-1 p-2 text-xs font-bold bg-gray-700 rounded border border-gray-600 hover:bg-gray-600">60 FPS</button>
-                </div>
-                <p class="text-[10px] text-gray-500 mt-2">Note: 60FPS requires good light. Front cameras usually limit to 30FPS.</p>
-            </div>
-        </div>
-    </dialog>
 
     <!-- Canvas/Hidden -->
     <canvas id="canvas" class="hidden"></canvas>
@@ -154,138 +122,141 @@
         let mediaRecorder = null;
         let chunks = [];
         let isRecording = false;
-        let currentRes = '1080p';
-        let currentFps = 30;
+        let mode = 'photo'; // 'photo' | 'video'
         let facingMode = 'environment'; // Default Back Camera
         let directoryHandle = null;
 
         // Elements
         const video = document.getElementById('video-feed');
         const loader = document.getElementById('loader-overlay');
+        const loaderText = document.getElementById('loader-text');
+        const modeBadge = document.getElementById('mode-badge');
         
-        // --- 1. CORE CAMERA ENGINE ---
+        // --- 1. SMART CAMERA ENGINE ---
         async function startCamera() {
             showLoader(true);
             if (stream) stream.getTracks().forEach(t => t.stop());
 
-            // Define strict constraints based on selection
             let constraints = {
                 audio: true,
-                video: {
-                    facingMode: facingMode
-                }
+                video: { facingMode: facingMode }
             };
 
-            // Resolution Logic
-            if (currentRes === '4k') {
-                constraints.video.width = { min: 3840, ideal: 3840 };
-                constraints.video.height = { min: 2160, ideal: 2160 };
-            } else if (currentRes === '1080p') {
-                constraints.video.width = { min: 1920, ideal: 1920 };
-                constraints.video.height = { min: 1080, ideal: 1080 };
+            // AUTOMATIC LOGIC
+            if (mode === 'photo') {
+                // PHOTO MODE: Request MAX resolution, ignore FPS
+                // Ideally 4K or higher if available
+                constraints.video.width = { ideal: 4096 }; 
+                constraints.video.height = { ideal: 2160 };
+                loaderText.innerText = "Setting Max Quality...";
             } else {
-                constraints.video.width = { ideal: 1280 };
-                constraints.video.height = { ideal: 720 };
-            }
-
-            // FPS Logic (Strict priority)
-            if (currentFps === 60) {
-                constraints.video.frameRate = { min: 30, ideal: 60 }; // Try hard for 60
-            } else {
-                constraints.video.frameRate = { ideal: 30 };
+                // VIDEO MODE: Request 1080p & 60 FPS specifically
+                constraints.video.width = { ideal: 1920 };
+                constraints.video.height = { ideal: 1080 };
+                // Try to force 60 FPS, fallback to 30 if dark/unsupported
+                constraints.video.frameRate = { min: 30, ideal: 60 };
+                loaderText.innerText = "Setting 60 FPS Mode...";
             }
 
             try {
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 
-                // Wait for stream to stabilize then check REAL stats
                 video.onloadedmetadata = () => {
-                    setTimeout(analyzeStream, 500);
-                    showLoader(false);
+                    setTimeout(() => {
+                        analyzeStream();
+                        showLoader(false);
+                        showModeBadge();
+                    }, 400);
                 };
                 
-                // Update Mirroring
                 video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
 
             } catch (err) {
                 console.error(err);
                 showLoader(false);
-                alert("Error: Camera not supported or Settings too high for this device.");
-                // Fallback to basic if 4K fails
-                if (currentRes === '4k') {
-                    currentRes = '1080p';
-                    startCamera();
-                }
+                alert("Camera Access Error. Please Refresh.");
             }
         }
 
-        // --- 2. REALITY CHECK (Does the setting actually work?) ---
+        // --- 2. ANALYZE WHAT WE GOT ---
         function analyzeStream() {
             const track = stream.getVideoTracks()[0];
             const settings = track.getSettings();
             
             const w = settings.width;
-            const h = settings.height;
             const fps = settings.frameRate ? Math.round(settings.frameRate) : 30;
 
-            // Update Top Badge with REAL data
-            let resLabel = "SD";
-            if (w >= 3800) resLabel = "4K UHD";
+            // Update UI based on reality
+            let resLabel = "HD";
+            if (w >= 3800) resLabel = "4K MAX";
             else if (w >= 1900) resLabel = "1080p";
-            else if (w >= 1200) resLabel = "720p";
+            else resLabel = "720p";
             
+            // Visual feedback on Top Right
             document.getElementById('real-res').innerText = resLabel;
+            document.getElementById('real-res').className = mode === 'photo' ? "text-xs font-bold text-yellow-400 font-mono" : "text-xs font-bold text-blue-400 font-mono";
+            
             document.getElementById('real-fps').innerText = `${fps} FPS`;
-
-            // Color code FPS (Green for 60, Gray for 30)
             document.getElementById('real-fps').className = fps >= 45 
                 ? "text-[10px] text-green-400 font-mono" 
                 : "text-[10px] text-gray-400 font-mono";
         }
 
-        // --- 3. SETTINGS HANDLING ---
-        function applySettings(res, fps) {
-            currentRes = res;
-            currentFps = fps;
+        // --- 3. SWITCHING MODES (The Auto Logic) ---
+        function setMode(m) {
+            if (mode === m) return; // No change
+            mode = m;
             
-            // UI Update
-            updateSettingsUI();
-            
-            // Close Modal & Restart Camera
-            document.getElementById('settings-modal').close();
-            startCamera(); 
+            // Update UI Buttons
+            updateModeUI();
+
+            // RESTART CAMERA with new Optimized Settings
+            startCamera();
         }
 
-        function updateSettingsUI() {
-            // Reset all buttons
-            ['4k', '1080p', '720p'].forEach(r => {
-                const btn = document.getElementById(`btn-${r}`);
-                btn.className = `p-2 text-xs font-bold rounded border ${currentRes === r ? 'bg-yellow-500 text-black border-yellow-600' : 'bg-gray-700 border-gray-600 hover:bg-gray-600'}`;
-            });
+        function updateModeUI() {
+            const photoBtn = document.getElementById('btn-shutter-photo');
+            const videoBtn = document.getElementById('btn-shutter-video');
+            const modeBg = document.getElementById('mode-bg');
+            const tPhoto = document.getElementById('txt-photo');
+            const tVideo = document.getElementById('txt-video');
 
-            [30, 60].forEach(f => {
-                const btn = document.getElementById(`btn-${f}fps`);
-                btn.className = `flex-1 p-2 text-xs font-bold rounded border ${currentFps === f ? 'bg-yellow-500 text-black border-yellow-600' : 'bg-gray-700 border-gray-600 hover:bg-gray-600'}`;
-            });
+            if (mode === 'photo') {
+                modeBg.style.transform = "translateX(0)";
+                tPhoto.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-black transition-colors";
+                tVideo.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-gray-400 transition-colors";
+                photoBtn.classList.remove('hidden');
+                videoBtn.classList.add('hidden');
+                modeBadge.innerText = "MAX RESOLUTION PHOTO";
+                modeBadge.classList.replace('bg-blue-500/90', 'bg-yellow-500/90');
+            } else {
+                modeBg.style.transform = "translateX(100%)";
+                tPhoto.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-gray-400 transition-colors";
+                tVideo.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-black transition-colors";
+                photoBtn.classList.add('hidden');
+                videoBtn.classList.remove('hidden');
+                modeBadge.innerText = "1080p 60FPS VIDEO";
+                modeBadge.classList.replace('bg-yellow-500/90', 'bg-blue-500/90');
+            }
         }
 
-        function openSettings() {
-            updateSettingsUI(); // Ensure UI matches state
-            document.getElementById('settings-modal').showModal();
+        function showModeBadge() {
+            modeBadge.style.opacity = 1;
+            setTimeout(() => modeBadge.style.opacity = 0, 2000);
         }
 
         // --- 4. STORAGE & SAVING ---
         async function selectStorage() {
             if ('showDirectoryPicker' in window) {
                 try {
-                    directoryHandle = await window.showDirectoryPicker({id: 'cam_pro', mode: 'readwrite'});
+                    directoryHandle = await window.showDirectoryPicker({id: 'cam_auto', mode: 'readwrite'});
                     document.getElementById('storage-name').innerText = directoryHandle.name;
                     document.getElementById('storage-icon').classList.replace('text-gray-400', 'text-green-400');
                     showToast("Storage Linked", "success");
                 } catch(e) {}
             } else {
-                alert("Folder selection not supported. Files will download manually.");
+                alert("Files will download to your default folder.");
             }
         }
 
@@ -319,7 +290,6 @@
             setTimeout(() => flash.style.opacity = 0, 50);
             setTimeout(() => flash.remove(), 200);
 
-            // Capture high quality frame
             const canvas = document.getElementById('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -337,15 +307,15 @@
         function toggleVideo() {
             if (!isRecording) {
                 chunks = [];
-                // High Bitrate Recording
-                const options = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 12000000 }; // 12 Mbps
+                // High Bitrate for 1080p/60FPS
+                const options = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 }; 
                 try { mediaRecorder = new MediaRecorder(stream, options); }
-                catch(e) { mediaRecorder = new MediaRecorder(stream); } // Fallback
+                catch(e) { mediaRecorder = new MediaRecorder(stream); }
 
                 mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
                 mediaRecorder.onstop = () => {
                     const blob = new Blob(chunks, { type: 'video/webm' });
-                    document.getElementById('preview-img').src = URL.createObjectURL(blob); // Thumbnail workaround
+                    document.getElementById('preview-img').src = URL.createObjectURL(blob); 
                     document.getElementById('preview-img').classList.remove('hidden');
                     saveFile(blob, `VID_${Date.now()}.webm`);
                 };
@@ -359,29 +329,6 @@
                 isRecording = false;
                 document.getElementById('rec-dot').classList.remove('scale-50', 'rounded-md');
                 document.getElementById('btn-shutter-video').classList.remove('pulse-record');
-            }
-        }
-
-        // --- 6. HELPERS ---
-        function setMode(m) {
-            const photoBtn = document.getElementById('btn-shutter-photo');
-            const videoBtn = document.getElementById('btn-shutter-video');
-            const modeBg = document.getElementById('mode-bg');
-            const tPhoto = document.getElementById('txt-photo');
-            const tVideo = document.getElementById('txt-video');
-
-            if (m === 'photo') {
-                modeBg.style.transform = "translateX(0)";
-                tPhoto.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-black transition-colors";
-                tVideo.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-gray-400 transition-colors";
-                photoBtn.classList.remove('hidden');
-                videoBtn.classList.add('hidden');
-            } else {
-                modeBg.style.transform = "translateX(100%)";
-                tPhoto.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-gray-400 transition-colors";
-                tVideo.className = "flex-1 relative z-10 text-xs font-bold py-2 text-center text-black transition-colors";
-                photoBtn.classList.add('hidden');
-                videoBtn.classList.remove('hidden');
             }
         }
 
