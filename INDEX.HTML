@@ -2,348 +2,317 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Direct Save Camera (Fixed)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Fit Invoice</title>
     <style>
+        /* --- General Setup --- */
         body {
-            background-color: #000;
-            color: white;
-            font-family: sans-serif;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
-        #video-feed {
-            width: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
             height: 100vh;
-            object-fit: cover;
-            transform: scaleX(-1);
+            overflow: hidden;
         }
-        .pulse-record { animation: pulse-red 1.5s infinite; }
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+
+        /* --- Left Side: The Form (Editor) --- */
+        .form-container {
+            width: 35%;
+            background: white;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            height: 100%;
+            overflow-y: auto;
+            box-sizing: border-box;
+            z-index: 10;
+            border-top: 5px solid #1e88e5;
         }
-        .loader {
-            border: 3px solid rgba(255,255,255,0.1);
-            border-left-color: #eab308;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
+        
+        input, textarea { 
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; 
+            box-sizing: border-box; font-size: 14px; font-family: inherit;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        * { -webkit-user-select: none; user-select: none; }
+        textarea { resize: vertical; }
+        input:focus, textarea:focus { border-color: #1e88e5; outline: none; }
+        
+        .item-row { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; border-radius: 6px;}
+        .btn { padding: 12px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; width: 100%; margin-top: 5px; font-size: 14px;}
+        .btn-add { background-color: #28a745; }
+        .btn-remove { background-color: #ff4d4d; }
+        .btn-print { background-color: #1e88e5; margin-top: 20px; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        /* --- Right Side: The Preview Area --- */
+        .preview-wrapper {
+            width: 65%;
+            background: #525659;
+            overflow-y: auto; /* Only vertical scroll */
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            box-sizing: border-box;
+        }
+
+        /* --- The Bill Paper (Responsive) --- */
+        .invoice-paper {
+            background: white;
+            /* KEY CHANGE: Width is flexible now */
+            width: 100%; 
+            max-width: 21cm; /* Limits width on PC to look like paper */
+            min-height: 29.7cm;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* --- Invoice Header --- */
+        .inv-header {
+            background-color: #1e88e5;
+            color: white;
+            padding: 30px;
+            text-align: right; 
+        }
+        .inv-header h1 { margin: 0; font-size: 36px; letter-spacing: 2px; font-weight: 400; }
+
+        /* --- Invoice Body --- */
+        .inv-body { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; }
+
+        .shop-info-section { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .shop-info-section h3 { font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        .shop-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; color: #1e88e5; }
+        .shop-details div { font-size: 13px; line-height: 1.4; }
+
+        .top-info { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 20px; }
+        .client-info { flex: 1; min-width: 150px; }
+        .meta-info { text-align: right; min-width: 120px; }
+
+        .client-info h3, .meta-info h3 { font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        .client-info p, .meta-info p { margin: 0; font-weight: bold; font-size: 14px; }
+        
+        #out_client_addr { font-weight: normal; white-space: pre-wrap; line-height: 1.4; color: #333; font-size: 13px; }
+
+        /* Table Styling - Compact for Mobile */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
+        th { text-align: left; color: #1e88e5; font-weight: 600; padding: 8px 2px; border-bottom: 2px solid #1e88e5; font-size: 12px; text-transform: uppercase;}
+        th:last-child, td:last-child { text-align: right; }
+        td { padding: 10px 2px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 13px; word-wrap: break-word;}
+        
+        .totals-section { margin-top: 20px; align-self: flex-end; width: 100%; max-width: 250px; }
+        .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+        .totals-row.last { font-weight: bold; border-top: 1px solid #eee; margin-top: 10px; paddingTop: 10px; font-size: 18px; color: #1e88e5;}
+
+        /* --- MOBILE RESPONSIVE LOGIC --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; overflow: auto; }
+            
+            /* Form on Top */
+            .form-container { width: 100%; height: auto; order: 1; padding: 15px; border-top: none; border-bottom: 5px solid #1e88e5;}
+            
+            /* Preview on Bottom */
+            .preview-wrapper { 
+                width: 100%; 
+                order: 2; 
+                padding: 0; /* Remove wrapper padding */
+                background: #fff; /* Merge with paper */
+                overflow: visible; 
+                display: block;
+            }
+            
+            /* The Paper itself becomes full width */
+            .invoice-paper { 
+                width: 100%; 
+                max-width: 100%; 
+                box-shadow: none; 
+                min-height: auto; /* Let it grow naturally */
+            }
+
+            /* Adjust Padding inside Bill for small screens */
+            .inv-header { padding: 20px 15px; }
+            .inv-header h1 { font-size: 28px; }
+            .inv-body { padding: 15px; }
+            
+            /* Table adjustments for very small screens */
+            th, td { font-size: 11px; }
+            .totals-section { width: 100%; }
+        }
+
+        /* --- PRINT LOGIC --- */
+        @media print {
+            body { background: white; display: block; height: auto; overflow: visible; }
+            .form-container { display: none; }
+            .preview-wrapper { display: block; padding: 0; margin: 0; width: 100%; background: white; }
+            .invoice-paper { 
+                width: 100%; max-width: 100%; box-shadow: none; margin: 0; padding: 0;
+                border: none;
+            }
+            /* Force A4 margins while printing */
+            @page { margin: 0.5cm; size: auto; }
+        }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col relative">
+<body>
 
-    <div id="saving-overlay" class="absolute inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200">
-        <div class="loader w-12 h-12 mb-4 border-green-500"></div>
-        <h3 class="text-xl font-bold text-white">Saving Video...</h3>
-        <p id="save-path-display" class="text-sm text-gray-400 mt-1">Do not close app</p>
-    </div>
-
-    <video id="video-feed" autoplay playsinline muted></video>
-
-    <div class="absolute top-0 left-0 right-0 p-4 z-30 flex justify-between items-start bg-gradient-to-b from-black/90 to-transparent">
-        <button onclick="selectStorage()" id="storage-btn" class="flex items-center gap-3 bg-red-600/90 border-2 border-red-400 px-4 py-2.5 rounded-full active:scale-95 transition shadow-xl animate-pulse">
-            <i id="storage-icon" data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
-            <div class="flex flex-col items-start">
-                <span class="text-[9px] text-white/80 uppercase tracking-wider font-bold">STEP 1: CONNECT USB</span>
-                <span id="storage-name" class="text-xs font-black text-white truncate max-w-[120px]">Not Connected</span>
-            </div>
-        </button>
-
-        <div class="flex flex-col items-end px-3 py-1 bg-black/60 rounded-lg border border-white/10 backdrop-blur-md">
-            <span id="real-res" class="text-xs font-bold text-yellow-400 font-mono">AUTO</span>
-            <span id="real-fps" class="text-[10px] text-gray-300 font-mono">-- FPS</span>
+    <div class="form-container">
+        <h2 style="margin-top:0; font-size: 18px;">📝 Edit Bill</h2>
+        
+        <div class="form-group">
+            <label>Invoice No.</label>
+            <input type="text" id="in_number" value="001" oninput="updateInvoice()">
         </div>
-    </div>
-
-    <div id="mode-badge" class="absolute top-24 left-1/2 transform -translate-x-1/2 bg-yellow-500/90 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg z-20 opacity-0 transition-opacity pointer-events-none">
-        High Res Photo Mode
-    </div>
-
-    <div class="absolute bottom-0 w-full pb-8 pt-24 bg-gradient-to-t from-black via-black/80 to-transparent z-20 flex flex-col items-center gap-6">
-        <div class="flex bg-gray-900/90 p-1 rounded-full border border-gray-700 relative w-52 shadow-2xl backdrop-blur">
-            <div id="mode-bg" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-full transition-transform duration-300 shadow-md"></div>
-            <button onclick="setMode('photo')" class="flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide" id="txt-photo">PHOTO</button>
-            <button onclick="setMode('video')" class="flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-gray-500" id="txt-video">VIDEO</button>
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="in_date" oninput="updateInvoice()">
         </div>
 
-        <div class="flex items-center justify-around w-full px-6">
-            <div class="w-14 h-14 bg-gray-800 rounded-2xl overflow-hidden border-2 border-gray-600 relative shadow-lg">
-                <img id="preview-img" class="w-full h-full object-cover hidden">
-            </div>
-
-            <div class="relative">
-                <button id="btn-shutter-photo" onclick="capturePhoto()" class="w-20 h-20 rounded-full border-[5px] border-white flex items-center justify-center active:scale-90 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-                    <div class="w-16 h-16 bg-white rounded-full shadow-inner"></div>
-                </button>
-                <button id="btn-shutter-video" onclick="toggleVideo()" class="hidden w-20 h-20 rounded-full border-[5px] border-white flex items-center justify-center active:scale-90 transition shadow-[0_0_20px_rgba(220,38,38,0.5)]">
-                    <div id="rec-dot" class="w-16 h-16 bg-red-600 rounded-full transition-all duration-300 shadow-inner"></div>
-                </button>
-            </div>
-
-            <button onclick="flipCamera()" class="w-14 h-14 bg-gray-800/80 rounded-full flex items-center justify-center border border-gray-600 active:rotate-180 transition duration-500 backdrop-blur">
-                <i data-lucide="refresh-ccw" class="w-6 h-6 text-white"></i>
-            </button>
+        <hr style="border: 0; border-top: 1px solid #eee;">
+        <h3>Customer Details</h3>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="in_client_name" placeholder="Customer Name" value="Amit Sharma" oninput="updateInvoice()">
         </div>
+        <div class="form-group">
+            <label>Address</label>
+            <textarea id="in_client_addr" rows="3" placeholder="Address..." oninput="updateInvoice()">House 12, Road 5&#10;Jaipur, 302001</textarea>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee;">
+        <h3>Items</h3>
+        <div id="items-container"></div>
+        <button class="btn btn-add" onclick="addItemRow()">+ Add Item</button>
+
+        <button class="btn btn-print" onclick="window.print()">🖨️ Download PDF</button>
     </div>
-    
-    <div id="toast" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/90 text-white px-6 py-4 rounded-2xl border border-gray-700 opacity-0 pointer-events-none transition z-50 flex items-center gap-3 shadow-2xl">
-        <i id="t-icon" data-lucide="check-circle" class="w-6 h-6 text-green-500"></i>
-        <div>
-            <p id="t-msg" class="font-bold text-sm">Saved</p>
-            <p id="t-sub" class="text-[10px] text-gray-400">Success</p>
+
+    <div class="preview-wrapper">
+        <div class="invoice-paper">
+            
+            <div class="inv-header">
+                <h1>INVOICE</h1>
+            </div>
+
+            <div class="inv-body">
+                
+                <div class="shop-info-section">
+                    <h3>From:</h3>
+                    <div class="shop-details">
+                        <div contenteditable="true" class="shop-name">YOUR SHOP NAME</div>
+                        <div contenteditable="true">Market Road, City</div>
+                        <div contenteditable="true">Phone: 9876543210</div>
+                    </div>
+                </div>
+
+                <div class="top-info">
+                    <div class="client-info">
+                        <h3>Billed To:</h3>
+                        <p id="out_client_name" style="font-size: 15px; margin-bottom: 3px;">Customer Name</p>
+                        <div id="out_client_addr">Address</div>
+                    </div>
+                    
+                    <div class="meta-info">
+                        <h3>Invoice No.</h3>
+                        <p id="out_number">001</p>
+                        <br>
+                        <h3>Date</h3>
+                        <p id="out_date">--/--/----</p>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="40%">Item</th>
+                            <th width="20%">Price</th>
+                            <th width="15%">Qty</th>
+                            <th width="25%">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items"></tbody>
+                </table>
+
+                <div class="totals-section">
+                    <div class="totals-row last">
+                        <span>Total Amount</span>
+                        <span id="out_grand_total">₹0.00</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+                    <div style="text-align: center;">
+                        <div style="border-top: 1px solid #ccc; width: 100px; padding-top: 5px; font-size: 10px; color: #888;">Customer Sign</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="border-top: 1px solid #ccc; width: 100px; padding-top: 5px; font-size: 10px; color: #888;">Auth. Signatory</div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
     <script>
-        lucide.createIcons();
+        document.getElementById('in_date').valueAsDate = new Date();
 
-        let stream = null;
-        let mediaRecorder = null;
-        let chunks = [];
-        let isRecording = false;
-        let mode = 'photo';
-        let facingMode = 'environment';
-        let directoryHandle = null; 
-
-        const video = document.getElementById('video-feed');
-        const savingOverlay = document.getElementById('saving-overlay');
-        const storageBtn = document.getElementById('storage-btn');
-        const storageName = document.getElementById('storage-name');
-        const storageIcon = document.getElementById('storage-icon');
-        const savePathDisplay = document.getElementById('save-path-display');
-
-        async function startCamera() {
-            if (stream) stream.getTracks().forEach(t => t.stop());
-
-            let constraints = { audio: true, video: { facingMode: facingMode } };
-
-            if (mode === 'photo') {
-                constraints.video.width = { ideal: 4096 }; 
-                constraints.video.height = { ideal: 2160 };
-            } else {
-                constraints.video.width = { ideal: 1920 };
-                constraints.video.height = { ideal: 1080 };
-                constraints.video.frameRate = { ideal: 60 };
-            }
-
-            try {
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
-                video.onloadedmetadata = () => { setTimeout(analyzeStream, 500); };
-                video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
-            } catch (err) { 
-                alert("Camera Error: " + err.message); 
-            }
+        function addItemRow() {
+            const container = document.getElementById('items-container');
+            const div = document.createElement('div');
+            div.className = 'item-row';
+            div.innerHTML = `
+                <input type="text" placeholder="Item" class="i_name" oninput="updateInvoice()" value="Product">
+                <div style="display:flex; gap:5px; margin-top:5px;">
+                    <input type="number" placeholder="Price" class="i_cost" value="0" oninput="updateInvoice()" style="width:40%;">
+                    <input type="number" placeholder="Qty" class="i_qty" value="1" oninput="updateInvoice()" style="width:30%;">
+                    <button class="btn btn-remove" onclick="this.parentElement.parentElement.remove(); updateInvoice()" style="width:30%; margin:0; padding:0; font-size:12px;">Del</button>
+                </div>
+            `;
+            container.appendChild(div);
+            updateInvoice();
         }
 
-        function analyzeStream() {
-            const track = stream.getVideoTracks()[0];
-            const settings = track.getSettings();
-            const fps = settings.frameRate ? Math.round(settings.frameRate) : 30;
-            const h = settings.height;
-            
-            const resText = h >= 2100 ? "4K UHD" : (h >= 1000 ? "1080p" : "720p");
-            document.getElementById('real-res').innerText = resText;
-            document.getElementById('real-fps').innerText = fps + " FPS";
-            document.getElementById('real-res').className = mode==='photo' ? "text-xs font-bold text-yellow-400 font-mono" : "text-xs font-bold text-blue-400 font-mono";
+        function updateInvoice() {
+            document.getElementById('out_number').innerText = document.getElementById('in_number').value;
+            document.getElementById('out_date').innerText = formatDate(document.getElementById('in_date').value);
+            document.getElementById('out_client_name').innerText = document.getElementById('in_client_name').value;
+            document.getElementById('out_client_addr').innerText = document.getElementById('in_client_addr').value;
+
+            const itemRows = document.querySelectorAll('.item-row');
+            const tbody = document.getElementById('invoice-items');
+            tbody.innerHTML = '';
+
+            let subtotal = 0;
+
+            itemRows.forEach(row => {
+                const name = row.querySelector('.i_name').value;
+                const cost = parseFloat(row.querySelector('.i_cost').value) || 0;
+                const qty = parseFloat(row.querySelector('.i_qty').value) || 0;
+                const amount = cost * qty;
+                subtotal += amount;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><div style="font-weight:bold;">${name}</div></td>
+                    <td>₹${cost}</td>
+                    <td>${qty}</td>
+                    <td>₹${amount}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('out_grand_total').innerText = "₹" + subtotal.toFixed(2);
         }
 
-        async function selectStorage() {
-            if ('showDirectoryPicker' in window) {
-                try {
-                    const handle = await window.showDirectoryPicker({
-                        id: 'direct_cam_fix',
-                        mode: 'readwrite'
-                    });
-                    directoryHandle = handle;
-                    
-                    storageName.innerText = handle.name.substring(0, 12);
-                    storageBtn.className = "flex items-center gap-3 bg-green-600/90 border-2 border-green-400 px-4 py-2.5 rounded-full active:scale-95 transition shadow-xl";
-                    storageBtn.querySelector('span').innerText = "STORAGE LINKED";
-                    storageIcon.setAttribute('data-lucide', 'hard-drive');
-                    lucide.createIcons();
-                    showToast("Connected: " + handle.name, "success");
-                } catch (err) {}
-            } else {
-                alert("Browser not supported. Using Downloads.");
-            }
+        function formatDate(dateString) {
+            if(!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-IN');
         }
 
-        async function writeToDisk(blob, filename) {
-            savingOverlay.style.opacity = 1;
-            savePathDisplay.innerText = directoryHandle ? "Writing to USB..." : "Downloading...";
-            
-            try {
-                if (directoryHandle) {
-                    const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    showToast("Saved Successfully", "success");
-                } else {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    showToast("Saved to Downloads", "warning");
-                }
-            } catch (error) {
-                showToast("Write Error", "error");
-            } finally {
-                savingOverlay.style.opacity = 0;
-            }
-        }
-
-        async function capturePhoto() {
-            const flash = document.createElement('div');
-            flash.className = "fixed inset-0 bg-white z-50 opacity-100 transition-opacity duration-150";
-            document.body.appendChild(flash);
-            setTimeout(() => flash.style.opacity = 0, 50);
-            setTimeout(() => flash.remove(), 200);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            if (facingMode === 'user') { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
-            ctx.drawImage(video, 0, 0);
-            
-            canvas.toBlob(blob => {
-                updatePreview(blob);
-                writeToDisk(blob, `IMG_${Date.now()}.png`);
-            }, 'image/png', 1.0);
-        }
-
-        function toggleVideo() {
-            if (!isRecording) {
-                if (!directoryHandle) {
-                    if(!confirm("No Storage Selected! Video will go to Downloads. Continue?")) return;
-                }
-
-                chunks = [];
-                
-                // --- FIXED: ROBUST RECORDER INITIALIZATION ---
-                // Try to support all common mobile formats
-                const mimeTypes = [
-                    'video/webm;codecs=vp9',
-                    'video/webm;codecs=vp8',
-                    'video/webm',
-                    'video/mp4'
-                ];
-
-                let options = {};
-                let foundSupported = false;
-
-                for (const mimeType of mimeTypes) {
-                    if (MediaRecorder.isTypeSupported(mimeType)) {
-                        options = { mimeType, videoBitsPerSecond: 8000000 }; // 8 Mbps safe limit
-                        foundSupported = true;
-                        break;
-                    }
-                }
-
-                // If nothing specific found, let browser decide default
-                if (!foundSupported) options = { videoBitsPerSecond: 5000000 };
-
-                try {
-                    mediaRecorder = new MediaRecorder(stream, options);
-                } catch (e) {
-                    console.warn("Fallback recorder used");
-                    mediaRecorder = new MediaRecorder(stream);
-                }
-
-                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(chunks, { type: 'video/webm' });
-                    updatePreview(blob);
-                    writeToDisk(blob, `VID_${Date.now()}.webm`);
-                };
-
-                try {
-                    mediaRecorder.start();
-                    isRecording = true;
-                    document.getElementById('rec-dot').classList.add('scale-50', 'rounded-md');
-                    document.getElementById('btn-shutter-video').classList.add('pulse-record');
-                } catch(err) {
-                    alert("Recording Failed to Start: " + err.message);
-                }
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                document.getElementById('rec-dot').classList.remove('scale-50', 'rounded-md');
-                document.getElementById('btn-shutter-video').classList.remove('pulse-record');
-            }
-        }
-
-        function setMode(m) {
-            mode = m;
-            updateUI();
-            startCamera();
-            
-            const badge = document.getElementById('mode-badge');
-            badge.innerText = m === 'photo' ? "MAX RES PHOTO" : "60FPS VIDEO";
-            badge.className = `absolute top-24 left-1/2 transform -translate-x-1/2 ${m==='photo'?'bg-yellow-500':'bg-blue-500'}/90 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg z-20 transition-opacity pointer-events-none`;
-            badge.style.opacity = 1;
-            setTimeout(() => badge.style.opacity = 0, 1500);
-        }
-
-        function updateUI() {
-            const pBtn = document.getElementById('btn-shutter-photo');
-            const vBtn = document.getElementById('btn-shutter-video');
-            const bg = document.getElementById('mode-bg');
-            const tP = document.getElementById('txt-photo');
-            const tV = document.getElementById('txt-video');
-
-            if (mode === 'photo') {
-                bg.style.transform = 'translateX(0)';
-                pBtn.classList.remove('hidden');
-                vBtn.classList.add('hidden');
-                tP.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-black transition-colors";
-                tV.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-gray-500 transition-colors";
-            } else {
-                bg.style.transform = 'translateX(100%)';
-                pBtn.classList.add('hidden');
-                vBtn.classList.remove('hidden');
-                tP.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-gray-500 transition-colors";
-                tV.className = "flex-1 relative z-10 text-xs font-black py-2.5 tracking-wide text-black transition-colors";
-            }
-        }
-
-        function updatePreview(blob) {
-            const url = URL.createObjectURL(blob);
-            const img = document.getElementById('preview-img');
-            img.src = url;
-            img.classList.remove('hidden');
-        }
-
-        function showToast(msg, type) {
-            const t = document.getElementById('toast');
-            const i = document.getElementById('t-icon');
-            document.getElementById('t-msg').innerText = msg;
-            i.className = type === 'success' ? "w-6 h-6 text-green-500" : "w-6 h-6 text-red-500";
-            i.setAttribute('data-lucide', type === 'success' ? "check-circle" : "alert-triangle");
-            lucide.createIcons();
-            t.style.opacity = 1;
-            setTimeout(() => t.style.opacity = 0, 3000);
-        }
-
-        function flipCamera() {
-            facingMode = facingMode === 'user' ? 'environment' : 'user';
-            startCamera();
-        }
-
-        startCamera();
+        addItemRow();
     </script>
 </body>
 </html>
