@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Invoice Generator</title>
+    <title>Fully Auto Invoice</title>
     <style>
         /* --- General Layout --- */
         body { font-family: 'Segoe UI', sans-serif; background-color: #e0e0e0; margin: 0; display: flex; height: 100vh; overflow: hidden; }
@@ -25,11 +25,11 @@
         .btn-remove { background-color: #ff4d4d; }
         .btn-print { background-color: #1e88e5; margin-top: 20px; font-size: 16px; padding: 15px; }
 
-        /* --- Fetch Box (Date Wise) --- */
+        /* --- Fetch Box --- */
         .fetch-box { background-color: #e3f2fd; border: 1px solid #90caf9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .fetch-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .fetch-header h3 { margin: 0; color: #1565c0; font-size: 16px; }
-        .refresh-btn { background: none; border: none; cursor: pointer; color: #1565c0; font-size: 18px; }
+        .status-text { font-size: 11px; color: #666; margin-top: 5px; text-align: right; display: block;}
         select optgroup { font-weight: bold; color: #1e88e5; }
 
         /* --- Right Side: Preview --- */
@@ -70,18 +70,17 @@
         
         <div class="fetch-box">
             <div class="fetch-header">
-                <h3>📅 Select Order (Date Wise)</h3>
-                <button class="refresh-btn" onclick="fetchOrders()" title="Refresh List">🔄</button>
+                <h3>📅 Auto-Load Order</h3>
+                <button onclick="init()" style="border:none; background:transparent; cursor:pointer;">🔄</button>
             </div>
-            <label style="font-size:11px;">Select an Order ID to Auto-Fill:</label>
-            <div style="display:flex; gap:5px;">
-                <select id="order-dropdown" onchange="loadSelectedOrder()">
-                    <option value="">Loading Orders...</option>
-                </select>
-            </div>
+            <label style="font-size:11px;">Select Order ID (Date Wise):</label>
+            <select id="order-dropdown" onchange="loadSelectedOrder()">
+                <option value="">Initializing...</option>
+            </select>
+            <span class="status-text" id="db-status">Connecting to Database...</span>
         </div>
 
-        <h2 style="margin:0 0 15px 0; font-size:18px; border-bottom:2px solid #eee; padding-bottom:10px;">📝 Edit Invoice Details</h2>
+        <h2 style="margin:0 0 15px 0; font-size:18px; border-bottom:2px solid #eee; padding-bottom:10px;">📝 Invoice Details</h2>
 
         <div class="form-group">
             <label>Invoice No.</label>
@@ -168,25 +167,53 @@
 
     <script>
         // ============================================
-        // ⚠️ PASTE YOUR GOOGLE SCRIPT URL HERE
+        // ⚠️ CONFIGURATION (FILL THESE TWO)
         // ============================================
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxslEI7qLFfkMdG7en69PSvaZVaT8G2R7IX49oTpNaVZCaYmA-9ZjrPvSOCfyFVJvmr/exec"; 
+        
+        // 1. PRODUCT SHEET ID (From where we check prices)
+        const PRODUCT_SHEET_ID = "1b6PU22uSE_P6R6uRzURfGVRXaoId7Fbp34foUiwtD3k"; 
+        
+        // 2. ORDER SCRIPT URL (From where we fetch orders)
+        const ORDER_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxslEI7qLFfkMdG7en69PSvaZVaT8G2R7IX49oTpNaVZCaYmA-9ZjrPvSOCfyFVJvmr/exec"; 
 
-        // Set Today's Date
+        // ============================================
+
         document.getElementById('in_date').valueAsDate = new Date();
         
+        let allProducts = [];
         let fetchedOrders = [];
 
-        // --- 1. FETCH & GROUP BY DATE ---
+        function init() {
+            fetchProducts();
+            fetchOrders();
+        }
+
+        // --- 1. FETCH PRODUCT PRICES ---
+        function fetchProducts() {
+            const url = `https://docs.google.com/spreadsheets/d/${PRODUCT_SHEET_ID}/gviz/tq?tqx=out:json&tq&gid=0`;
+            document.getElementById("db-status").innerText = "Loading Products...";
+
+            fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const jsonText = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
+                const json = JSON.parse(jsonText);
+                allProducts = json.table.rows.map(row => ({
+                    name: (row.c[1]?.v || "").trim().toLowerCase(), // Normalize name
+                    price: row.c[2]?.v || 0
+                }));
+                document.getElementById("db-status").innerText = "Products Loaded. Fetching Orders...";
+                console.log("Products Loaded:", allProducts.length);
+            })
+            .catch(err => console.error("Product Load Error:", err));
+        }
+
+        // --- 2. FETCH ORDERS ---
         function fetchOrders() {
             const dropdown = document.getElementById("order-dropdown");
-            const btn = document.querySelector(".refresh-btn");
-            
-            dropdown.innerHTML = "<option>Loading...</option>";
-            btn.style.transform = "rotate(360deg)";
-            btn.style.transition = "1s";
+            dropdown.innerHTML = "<option>Loading Orders...</option>";
 
-            fetch(SCRIPT_URL)
+            fetch(ORDER_SCRIPT_URL)
             .then(res => res.json())
             .then(data => {
                 fetchedOrders = data;
@@ -197,43 +224,36 @@
                     return;
                 }
 
-                // Group orders by Date
+                // Date Grouping
                 const grouped = {};
-                
                 data.forEach(order => {
-                    // Convert date string to readable format (e.g., "24 Nov 2025")
                     const d = new Date(order.date);
                     const dateKey = isNaN(d) ? "Others" : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                    
                     if(!grouped[dateKey]) grouped[dateKey] = [];
                     grouped[dateKey].push(order);
                 });
 
-                // Create Optgroups
                 for (const [dateLabel, orders] of Object.entries(grouped)) {
                     const group = document.createElement("optgroup");
-                    group.label = dateLabel; // e.g., "24 Nov 2025"
-
+                    group.label = dateLabel;
                     orders.forEach(order => {
                         const option = document.createElement("option");
                         option.value = order.id;
-                        // Format: "#1 - Amit (₹500)"
-                        option.text = `${order.id} - ${order.name} (₹${order.total})`;
+                        option.text = `${order.id} - ${order.name}`;
                         group.appendChild(option);
                     });
-
                     dropdown.appendChild(group);
                 }
-                btn.style.transform = "rotate(0deg)";
+                document.getElementById("db-status").innerText = "✅ System Ready";
             })
             .catch(err => {
                 console.error(err);
                 dropdown.innerHTML = "<option>Error loading</option>";
-                alert("Connection Failed. Check URL.");
+                document.getElementById("db-status").innerText = "❌ Connection Failed";
             });
         }
 
-        // --- 2. AUTO FILL FORM ---
+        // --- 3. AUTO FILL & PRICE MATCHING ---
         function loadSelectedOrder() {
             const selectedId = document.getElementById("order-dropdown").value;
             if(!selectedId) return;
@@ -241,51 +261,49 @@
             const order = fetchedOrders.find(o => o.id === selectedId);
             
             if(order) {
-                // Fill Order ID & Date
+                // Fill Basic Info
                 document.getElementById("in_number").value = order.id;
                 const d = new Date(order.date);
                 if(!isNaN(d)) document.getElementById("in_date").value = d.toISOString().split('T')[0];
-
-                // Fill Customer Details
                 document.getElementById("in_client_name").value = order.name;
                 document.getElementById("in_client_addr").value = `${order.address}\nPhone: ${order.phone}`;
 
-                // Fill Items (Parser)
-                // Expected format: "Item A (x2), Item B (x1)"
+                // Fill Items & Match Price
                 const container = document.getElementById("items-container");
-                container.innerHTML = ""; // Clear old items
+                container.innerHTML = ""; 
 
                 if(order.items) {
                     const itemsArray = order.items.split(', ');
                     
                     itemsArray.forEach(itemStr => {
-                        // Regex to extract Name and Qty: "Shirt (x2)" -> Name: Shirt, Qty: 2
+                        // "Shirt (x2)" -> Name: Shirt, Qty: 2
                         const match = itemStr.match(/(.*) \(x(\d+)\)/);
                         
-                        let name = itemStr;
+                        let name = itemStr.replace(/ \(x\d+\)/, "").trim(); // Clean name
                         let qty = 1;
                         let price = 0;
 
                         if(match) {
-                            name = match[1];
+                            name = match[1].trim();
                             qty = parseInt(match[2]);
                         }
 
-                        // Smart Logic: If only 1 item type exists, we can calculate price from Total
-                        if(itemsArray.length === 1 && qty > 0) {
-                            price = order.total / qty;
+                        // SEARCH PRICE IN PRODUCT LIST
+                        // We check if Product Name contains the Order Item Name (or vice versa)
+                        const foundProduct = allProducts.find(p => p.name === name.toLowerCase());
+                        
+                        if(foundProduct) {
+                            price = foundProduct.price;
                         }
 
                         addItemRow(name, price, qty);
                     });
                 }
-                
-                // Trigger update to refresh preview
                 updateInvoice();
             }
         }
 
-        // --- 3. INVOICE LOGIC ---
+        // --- 4. INVOICE FUNCTIONS ---
         function addItemRow(name = '', price = 0, qty = 1) {
             const container = document.getElementById('items-container');
             const div = document.createElement('div');
@@ -303,13 +321,11 @@
         }
 
         function updateInvoice() {
-            // Update Text Fields
             document.getElementById('out_number').innerText = document.getElementById('in_number').value;
             document.getElementById('out_date').innerText = formatDate(document.getElementById('in_date').value);
             document.getElementById('out_client_name').innerText = document.getElementById('in_client_name').value || "Customer Name";
             document.getElementById('out_client_addr').innerText = document.getElementById('in_client_addr').value || "Address";
 
-            // Update Table
             const rows = document.querySelectorAll('.item-row');
             const tbody = document.getElementById('invoice-items');
             tbody.innerHTML = '';
@@ -344,9 +360,9 @@
             return d.toLocaleDateString('en-IN');
         }
 
-        // Start
-        fetchOrders();
-        addItemRow(); // One empty row default
+        // Start System
+        init();
+        addItemRow(); 
     </script>
 </body>
 </html>
