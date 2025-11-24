@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Invoice Generator</title>
+    <title>Mobile Fit Invoice</title>
     <style>
         /* --- General Setup --- */
         body {
@@ -44,23 +44,23 @@
         .btn-add { background-color: #28a745; }
         .btn-remove { background-color: #ff4d4d; }
         .btn-print { background-color: #1e88e5; margin-top: 20px; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        
-        /* New Styles for Order Fetcher */
+
+        /* --- New: Fetch Box Styles --- */
         .fetch-box {
             background-color: #f0f7ff;
             border: 1px solid #cce5ff;
             padding: 15px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
-        .btn-load { background-color: #6610f2; width: auto; flex: 1; }
-        .btn-refresh { background: transparent; border: none; color: #1e88e5; font-size: 12px; cursor: pointer; text-decoration: underline; margin-top: 5px; }
+        .btn-load { background-color: #6610f2; width: auto; flex: 1; margin-top: 0; }
+        .refresh-link { display:block; text-align:right; font-size:12px; margin-top:5px; color:#1e88e5; cursor:pointer; text-decoration: underline;}
 
         /* --- Right Side: The Preview Area --- */
         .preview-wrapper {
             width: 65%;
             background: #525659;
-            overflow-y: auto;
+            overflow-y: auto; /* Only vertical scroll */
             padding: 20px;
             display: flex;
             justify-content: center;
@@ -72,7 +72,7 @@
         .invoice-paper {
             background: white;
             width: 100%; 
-            max-width: 21cm;
+            max-width: 21cm; /* Limits width on PC to look like paper */
             min-height: 29.7cm;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             position: relative;
@@ -81,6 +81,7 @@
             box-sizing: border-box;
         }
 
+        /* --- Invoice Header --- */
         .inv-header {
             background-color: #1e88e5;
             color: white;
@@ -89,6 +90,7 @@
         }
         .inv-header h1 { margin: 0; font-size: 36px; letter-spacing: 2px; font-weight: 400; }
 
+        /* --- Invoice Body --- */
         .inv-body { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; }
 
         .shop-info-section { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
@@ -105,6 +107,7 @@
         
         #out_client_addr { font-weight: normal; white-space: pre-wrap; line-height: 1.4; color: #333; font-size: 13px; }
 
+        /* Table Styling */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
         th { text-align: left; color: #1e88e5; font-weight: 600; padding: 8px 2px; border-bottom: 2px solid #1e88e5; font-size: 12px; text-transform: uppercase;}
         th:last-child, td:last-child { text-align: right; }
@@ -114,6 +117,7 @@
         .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
         .totals-row.last { font-weight: bold; border-top: 1px solid #eee; margin-top: 10px; paddingTop: 10px; font-size: 18px; color: #1e88e5;}
 
+        /* --- MOBILE RESPONSIVE LOGIC --- */
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; overflow: auto; }
             .form-container { width: 100%; height: auto; order: 1; padding: 15px; border-top: none; border-bottom: 5px solid #1e88e5;}
@@ -126,6 +130,7 @@
             .totals-section { width: 100%; }
         }
 
+        /* --- PRINT LOGIC --- */
         @media print {
             body { background: white; display: block; height: auto; overflow: visible; }
             .form-container { display: none; }
@@ -138,24 +143,23 @@
 <body>
 
     <div class="form-container">
-        <!-- NEW SECTION: Google Sheet Loader -->
+        
         <div class="fetch-box">
-            <h3 style="margin-top:0; color:#1e88e5;">☁️ Load Order from Sheet</h3>
+            <h3 style="margin-top:0; color:#1e88e5;">☁️ Import from Online Order</h3>
             <label>Select Order ID</label>
             <div style="display:flex; gap:10px;">
                 <select id="order-dropdown">
-                    <option value="">Fetching IDs...</option>
+                    <option value="">Loading IDs...</option>
                 </select>
                 <button class="btn btn-load" onclick="loadSelectedOrder()">Load</button>
             </div>
-            <button class="btn-refresh" onclick="fetchOrders()">🔄 Refresh List</button>
+            <span class="refresh-link" onclick="fetchOrders()">🔄 Refresh List</span>
         </div>
-
         <h2 style="margin-top:0; font-size: 18px;">📝 Edit Bill</h2>
         
         <div class="form-group">
             <label>Invoice No.</label>
-            <input type="text" id="in_number" value="001" oninput="updateInvoice()">
+            <input type="text" id="in_number" value="#1" oninput="updateInvoice()">
         </div>
         <div class="form-group">
             <label>Date</label>
@@ -170,7 +174,7 @@
         </div>
         <div class="form-group">
             <label>Address</label>
-            <textarea id="in_client_addr" rows="3" placeholder="Address..." oninput="updateInvoice()"></textarea>
+            <textarea id="in_client_addr" rows="3" placeholder="Address / Phone..." oninput="updateInvoice()"></textarea>
         </div>
 
         <hr style="border: 0; border-top: 1px solid #eee;">
@@ -208,7 +212,7 @@
                     
                     <div class="meta-info">
                         <h3>Invoice No.</h3>
-                        <p id="out_number">001</p>
+                        <p id="out_number">#1</p>
                         <br>
                         <h3>Date</h3>
                         <p id="out_date">--/--/----</p>
@@ -248,23 +252,23 @@
     </div>
 
     <script>
-        // ===============================================
-        //  STEP 1: PASTE YOUR GOOGLE SCRIPT URL HERE
-        // ===============================================
+        // ============================================
+        // PASTE YOUR NEW GOOGLE SCRIPT URL BELOW
+        // ============================================
         const SCRIPT_URL = "PASTE_YOUR_WEB_APP_URL_HERE"; 
 
         document.getElementById('in_date').valueAsDate = new Date();
         let fetchedOrders = [];
 
-        // --- FETCH LOGIC ---
+        // --- 1. Fetch Orders from Google Sheet ---
         function fetchOrders() {
             const dropdown = document.getElementById("order-dropdown");
-            dropdown.innerHTML = "<option>Loading...</option>";
+            dropdown.innerHTML = "<option>Loading IDs...</option>";
 
             fetch(SCRIPT_URL)
             .then(res => res.json())
             .then(data => {
-                fetchedOrders = data; // Store data globally
+                fetchedOrders = data;
                 dropdown.innerHTML = '<option value="">-- Select Order --</option>';
                 
                 if(data.length === 0) {
@@ -273,48 +277,46 @@
                 }
 
                 data.forEach(order => {
-                    // Create option: "#ORD-1234 - Amit (₹500)"
+                    // Show: "#1 - Rahul (₹500)"
                     const option = document.createElement("option");
                     option.value = order.id;
-                    option.text = `${order.id} - ${order.name} (₹${order.total})`;
+                    option.text = `${order.id} - ${order.name} (Total: ₹${order.total})`;
                     dropdown.appendChild(option);
                 });
             })
             .catch(err => {
                 console.error(err);
-                dropdown.innerHTML = "<option>Error fetching data</option>";
-                alert("Failed to connect to Sheet. Check URL or Internet.");
+                dropdown.innerHTML = "<option>Error loading</option>";
+                alert("Failed to connect. Check URL.");
             });
         }
 
+        // --- 2. Load Selected Order into Form ---
         function loadSelectedOrder() {
             const selectedId = document.getElementById("order-dropdown").value;
-            if(!selectedId) return alert("Please select an order first");
+            if(!selectedId) return alert("Select an Order ID first");
 
             const order = fetchedOrders.find(o => o.id === selectedId);
             if(order) {
-                // 1. Fill Basic Info
+                // Fill details
                 document.getElementById("in_number").value = order.id;
                 document.getElementById("in_client_name").value = order.name;
                 document.getElementById("in_client_addr").value = order.address + "\nPhone: " + order.phone;
                 
-                // Format Date for Input
+                // Set Date
                 const d = new Date(order.date);
                 if(!isNaN(d)) {
                     document.getElementById("in_date").value = d.toISOString().split('T')[0];
                 }
 
-                // 2. Process Items
-                // Sheet data example: "Shirt (x2), Shoes (x1)"
-                // We need to parse this string
-                document.getElementById("items-container").innerHTML = ""; // Clear existing items
+                // Process Items string: "Shirt (x2), Pant (x1)"
+                document.getElementById("items-container").innerHTML = ""; // Clear list
                 
-                const itemsString = order.items; 
-                // Split by comma
-                const itemsArray = itemsString.split(', '); 
-
+                const itemsArray = order.items.split(', '); 
+                
                 itemsArray.forEach(itemStr => {
-                    // Try to extract Name and Qty using Regex: "Product Name (x2)"
+                    // Try to split Name and Qty
+                    // Regex looks for "Product Name (x5)" pattern
                     const match = itemStr.match(/(.*) \(x(\d+)\)/);
                     
                     let name = itemStr;
@@ -325,22 +327,16 @@
                         qty = match[2];
                     }
 
-                    // Add row
-                    addItemRow(name, 0, qty); // Price is 0 because sheet only has total
+                    // Price is set to 0 initially because Sheet only has Grand Total
+                    addItemRow(name, 0, qty); 
                 });
 
-                // Since we don't have individual unit price, we can
-                // optionally add a row for the Total directly if needed, 
-                // OR let the shop owner fill the prices.
-                // For now, I'll alert the user.
-                alert("Order Loaded! \n\nNote: Please enter individual item prices manually as the Sheet only stores the Grand Total.");
-                
                 updateInvoice();
+                alert("Order Loaded!\n\n⚠️ Price Note: Item prices are set to 0. Please enter the correct unit price for each item.");
             }
         }
 
-        // --- INVOICE LOGIC ---
-
+        // --- 3. Invoice Functions ---
         function addItemRow(name = '', price = 0, qty = 1) {
             const container = document.getElementById('items-container');
             const div = document.createElement('div');
@@ -395,9 +391,9 @@
             return date.toLocaleDateString('en-IN');
         }
 
-        // Initialize
-        addItemRow(); // Add one empty row
-        fetchOrders(); // Load orders on startup
+        // Initialize: Add one empty row & Fetch Orders
+        addItemRow();
+        fetchOrders(); 
     </script>
 </body>
 </html>
