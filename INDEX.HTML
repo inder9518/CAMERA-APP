@@ -3,140 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile Fit Invoice</title>
+    <title>Smart Invoice Generator</title>
     <style>
-        /* --- General Setup --- */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #e0e0e0;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* --- Left Side: The Form (Editor) --- */
-        .form-container {
-            width: 35%;
-            background: white;
-            padding: 20px;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            height: 100%;
-            overflow-y: auto;
-            box-sizing: border-box;
-            z-index: 10;
-            border-top: 5px solid #1e88e5;
-        }
+        /* --- General Layout --- */
+        body { font-family: 'Segoe UI', sans-serif; background-color: #e0e0e0; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
-        
-        input, textarea, select { 
-            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; 
-            box-sizing: border-box; font-size: 14px; font-family: inherit;
-        }
-        textarea { resize: vertical; }
+        /* --- Left Side: Form --- */
+        .form-container { width: 35%; background: white; padding: 20px; height: 100%; overflow-y: auto; box-sizing: border-box; border-top: 5px solid #1e88e5; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #555; }
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
         input:focus, textarea:focus, select:focus { border-color: #1e88e5; outline: none; }
         
-        .item-row { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; border-radius: 6px;}
-        .btn { padding: 12px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; width: 100%; margin-top: 5px; font-size: 14px;}
+        /* --- Item Rows --- */
+        .item-row { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #f9f9f9; border-radius: 6px; display: flex; flex-direction: column; gap: 5px; }
+        .row-inputs { display: flex; gap: 5px; }
+        
+        /* --- Buttons --- */
+        .btn { padding: 10px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; width: 100%; margin-top: 5px; }
         .btn-add { background-color: #28a745; }
         .btn-remove { background-color: #ff4d4d; }
-        .btn-print { background-color: #1e88e5; margin-top: 20px; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-print { background-color: #1e88e5; margin-top: 20px; font-size: 16px; padding: 15px; }
 
-        /* --- New: Fetch Box Styles --- */
-        .fetch-box {
-            background-color: #f0f7ff;
-            border: 1px solid #cce5ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-        }
-        .btn-load { background-color: #6610f2; width: auto; flex: 1; margin-top: 0; }
-        .refresh-link { display:block; text-align:right; font-size:12px; margin-top:5px; color:#1e88e5; cursor:pointer; text-decoration: underline;}
+        /* --- Fetch Box (Date Wise) --- */
+        .fetch-box { background-color: #e3f2fd; border: 1px solid #90caf9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .fetch-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .fetch-header h3 { margin: 0; color: #1565c0; font-size: 16px; }
+        .refresh-btn { background: none; border: none; cursor: pointer; color: #1565c0; font-size: 18px; }
+        select optgroup { font-weight: bold; color: #1e88e5; }
 
-        /* --- Right Side: The Preview Area --- */
-        .preview-wrapper {
-            width: 65%;
-            background: #525659;
-            overflow-y: auto; /* Only vertical scroll */
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            box-sizing: border-box;
-        }
-
-        /* --- The Bill Paper --- */
-        .invoice-paper {
-            background: white;
-            width: 100%; 
-            max-width: 21cm; /* Limits width on PC to look like paper */
-            min-height: 29.7cm;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-        }
-
-        /* --- Invoice Header --- */
-        .inv-header {
-            background-color: #1e88e5;
-            color: white;
-            padding: 30px;
-            text-align: right; 
-        }
-        .inv-header h1 { margin: 0; font-size: 36px; letter-spacing: 2px; font-weight: 400; }
-
-        /* --- Invoice Body --- */
+        /* --- Right Side: Preview --- */
+        .preview-wrapper { width: 65%; background: #525659; overflow-y: auto; padding: 20px; display: flex; justify-content: center; }
+        .invoice-paper { background: white; width: 100%; max-width: 21cm; min-height: 29.7cm; box-shadow: 0 0 20px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
+        
+        /* --- Invoice Design --- */
+        .inv-header { background-color: #1e88e5; color: white; padding: 30px; text-align: right; }
+        .inv-header h1 { margin: 0; font-size: 32px; letter-spacing: 2px; }
         .inv-body { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; }
-
-        .shop-info-section { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .shop-info-section h3 { font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
-        .shop-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; color: #1e88e5; }
-        .shop-details div { font-size: 13px; line-height: 1.4; }
-
-        .top-info { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 20px; }
-        .client-info { flex: 1; min-width: 150px; }
-        .meta-info { text-align: right; min-width: 120px; }
-
-        .client-info h3, .meta-info h3 { font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
-        .client-info p, .meta-info p { margin: 0; font-weight: bold; font-size: 14px; }
         
-        #out_client_addr { font-weight: normal; white-space: pre-wrap; line-height: 1.4; color: #333; font-size: 13px; }
-
-        /* Table Styling */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
-        th { text-align: left; color: #1e88e5; font-weight: 600; padding: 8px 2px; border-bottom: 2px solid #1e88e5; font-size: 12px; text-transform: uppercase;}
-        th:last-child, td:last-child { text-align: right; }
-        td { padding: 10px 2px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 13px; word-wrap: break-word;}
+        .shop-info { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .shop-name { font-size: 20px; font-weight: bold; color: #1e88e5; }
         
-        .totals-section { margin-top: 20px; align-self: flex-end; width: 100%; max-width: 250px; }
-        .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-        .totals-row.last { font-weight: bold; border-top: 1px solid #eee; margin-top: 10px; paddingTop: 10px; font-size: 18px; color: #1e88e5;}
+        .client-meta { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .box-title { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
+        .meta-right { text-align: right; }
 
-        /* --- MOBILE RESPONSIVE LOGIC --- */
-        @media (max-width: 768px) {
-            body { flex-direction: column; height: auto; overflow: auto; }
-            .form-container { width: 100%; height: auto; order: 1; padding: 15px; border-top: none; border-bottom: 5px solid #1e88e5;}
-            .preview-wrapper { width: 100%; order: 2; padding: 0; background: #fff; overflow: visible; display: block; }
-            .invoice-paper { width: 100%; max-width: 100%; box-shadow: none; min-height: auto; }
-            .inv-header { padding: 20px 15px; }
-            .inv-header h1 { font-size: 28px; }
-            .inv-body { padding: 15px; }
-            th, td { font-size: 11px; }
-            .totals-section { width: 100%; }
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; color: #1e88e5; border-bottom: 2px solid #1e88e5; padding: 8px; font-size: 12px; }
+        td { padding: 10px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .text-right { text-align: right; }
+        
+        .total-box { margin-top: 20px; align-self: flex-end; width: 250px; font-size: 18px; font-weight: bold; color: #1e88e5; border-top: 2px solid #eee; padding-top: 10px; display: flex; justify-content: space-between; }
 
-        /* --- PRINT LOGIC --- */
         @media print {
-            body { background: white; display: block; height: auto; overflow: visible; }
+            body { background: white; display: block; height: auto; }
             .form-container { display: none; }
-            .preview-wrapper { display: block; padding: 0; margin: 0; width: 100%; background: white; }
-            .invoice-paper { width: 100%; max-width: 100%; box-shadow: none; margin: 0; padding: 0; border: none; }
-            @page { margin: 0.5cm; size: auto; }
+            .preview-wrapper { width: 100%; padding: 0; margin: 0; background: white; display: block; }
+            .invoice-paper { width: 100%; max-width: 100%; box-shadow: none; }
+            @page { margin: 0; size: auto; }
         }
     </style>
 </head>
@@ -145,208 +69,233 @@
     <div class="form-container">
         
         <div class="fetch-box">
-            <h3 style="margin-top:0; color:#1e88e5;">☁️ Import from Online Order</h3>
-            <label>Select Order ID</label>
-            <div style="display:flex; gap:10px;">
-                <select id="order-dropdown">
-                    <option value="">Loading IDs...</option>
-                </select>
-                <button class="btn btn-load" onclick="loadSelectedOrder()">Load</button>
+            <div class="fetch-header">
+                <h3>📅 Select Order (Date Wise)</h3>
+                <button class="refresh-btn" onclick="fetchOrders()" title="Refresh List">🔄</button>
             </div>
-            <span class="refresh-link" onclick="fetchOrders()">🔄 Refresh List</span>
+            <label style="font-size:11px;">Select an Order ID to Auto-Fill:</label>
+            <div style="display:flex; gap:5px;">
+                <select id="order-dropdown" onchange="loadSelectedOrder()">
+                    <option value="">Loading Orders...</option>
+                </select>
+            </div>
         </div>
-        <h2 style="margin-top:0; font-size: 18px;">📝 Edit Bill</h2>
-        
+
+        <h2 style="margin:0 0 15px 0; font-size:18px; border-bottom:2px solid #eee; padding-bottom:10px;">📝 Edit Invoice Details</h2>
+
         <div class="form-group">
             <label>Invoice No.</label>
             <input type="text" id="in_number" value="#1" oninput="updateInvoice()">
         </div>
+        
         <div class="form-group">
             <label>Date</label>
             <input type="date" id="in_date" oninput="updateInvoice()">
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #eee;">
-        <h3>Customer Details</h3>
         <div class="form-group">
-            <label>Name</label>
-            <input type="text" id="in_client_name" placeholder="Customer Name" oninput="updateInvoice()">
-        </div>
-        <div class="form-group">
-            <label>Address</label>
-            <textarea id="in_client_addr" rows="3" placeholder="Address / Phone..." oninput="updateInvoice()"></textarea>
+            <label>Customer Name</label>
+            <input type="text" id="in_client_name" placeholder="Name" oninput="updateInvoice()">
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #eee;">
-        <h3>Items</h3>
+        <div class="form-group">
+            <label>Address / Phone</label>
+            <textarea id="in_client_addr" rows="3" placeholder="Address..." oninput="updateInvoice()"></textarea>
+        </div>
+
+        <h3 style="margin:15px 0 10px 0; font-size:14px;">Items List</h3>
         <div id="items-container"></div>
-        <button class="btn btn-add" onclick="addItemRow()">+ Add Item</button>
+        <button class="btn btn-add" onclick="addItemRow()">+ Add Item Manually</button>
 
-        <button class="btn btn-print" onclick="window.print()">🖨️ Download PDF</button>
+        <button class="btn btn-print" onclick="window.print()">🖨️ Print / Save PDF</button>
     </div>
 
     <div class="preview-wrapper">
         <div class="invoice-paper">
-            
             <div class="inv-header">
                 <h1>INVOICE</h1>
             </div>
 
             <div class="inv-body">
-                
-                <div class="shop-info-section">
-                    <h3>From:</h3>
-                    <div class="shop-details">
-                        <div contenteditable="true" class="shop-name">TECHDROIDE</div>
-                        <div contenteditable="true">Online Store</div>
-                        <div contenteditable="true">Phone: +91 9518843849</div>
-                    </div>
+                <div class="shop-info">
+                    <div class="shop-name" contenteditable="true">TECHDROIDE</div>
+                    <div contenteditable="true" style="font-size:13px;">Online Store & Accessories</div>
+                    <div contenteditable="true" style="font-size:13px;">Phone: +91 9518843849</div>
                 </div>
 
-                <div class="top-info">
-                    <div class="client-info">
-                        <h3>Billed To:</h3>
-                        <p id="out_client_name" style="font-size: 15px; margin-bottom: 3px;">Customer Name</p>
-                        <div id="out_client_addr">Address</div>
+                <div class="client-meta">
+                    <div>
+                        <div class="box-title">Bill To</div>
+                        <div id="out_client_name" style="font-weight:bold; font-size:15px;">Customer Name</div>
+                        <div id="out_client_addr" style="font-size:13px; white-space: pre-wrap;">Address</div>
                     </div>
-                    
-                    <div class="meta-info">
-                        <h3>Invoice No.</h3>
-                        <p id="out_number">#1</p>
-                        <br>
-                        <h3>Date</h3>
-                        <p id="out_date">--/--/----</p>
+                    <div class="meta-right">
+                        <div class="box-title">Invoice #</div>
+                        <div id="out_number" style="font-weight:bold; margin-bottom:10px;">#1</div>
+                        <div class="box-title">Date</div>
+                        <div id="out_date">--/--/----</div>
                     </div>
                 </div>
 
                 <table>
                     <thead>
                         <tr>
-                            <th width="40%">Item</th>
-                            <th width="20%">Price</th>
-                            <th width="15%">Qty</th>
-                            <th width="25%">Total</th>
+                            <th width="50%">Item Description</th>
+                            <th width="15%" class="text-right">Price</th>
+                            <th width="10%" class="text-right">Qty</th>
+                            <th width="25%" class="text-right">Amount</th>
                         </tr>
                     </thead>
                     <tbody id="invoice-items"></tbody>
                 </table>
 
-                <div class="totals-section">
-                    <div class="totals-row last">
-                        <span>Total Amount</span>
-                        <span id="out_grand_total">₹0.00</span>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 50px; display: flex; justify-content: space-between;">
-                    <div style="text-align: center;">
-                        <div style="border-top: 1px solid #ccc; width: 100px; padding-top: 5px; font-size: 10px; color: #888;">Customer Sign</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="border-top: 1px solid #ccc; width: 100px; padding-top: 5px; font-size: 10px; color: #888;">Auth. Signatory</div>
-                    </div>
+                <div class="total-box">
+                    <span>Total</span>
+                    <span id="out_grand_total">₹0.00</span>
                 </div>
 
+                <div style="margin-top:auto; padding-top:40px; display:flex; justify-content:space-between;">
+                    <div style="text-align:center;">
+                        <div style="border-top:1px solid #ccc; width:120px; padding-top:5px; font-size:11px; color:#888;">Customer Signature</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="border-top:1px solid #ccc; width:120px; padding-top:5px; font-size:11px; color:#888;">Authorized Signatory</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // PASTE YOUR NEW GOOGLE SCRIPT URL BELOW
+        // ⚠️ PASTE YOUR GOOGLE SCRIPT URL HERE
         // ============================================
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxslEI7qLFfkMdG7en69PSvaZVaT8G2R7IX49oTpNaVZCaYmA-9ZjrPvSOCfyFVJvmr/exec"; 
 
+        // Set Today's Date
         document.getElementById('in_date').valueAsDate = new Date();
+        
         let fetchedOrders = [];
 
-        // --- 1. Fetch Orders from Google Sheet ---
+        // --- 1. FETCH & GROUP BY DATE ---
         function fetchOrders() {
             const dropdown = document.getElementById("order-dropdown");
-            dropdown.innerHTML = "<option>Loading IDs...</option>";
+            const btn = document.querySelector(".refresh-btn");
+            
+            dropdown.innerHTML = "<option>Loading...</option>";
+            btn.style.transform = "rotate(360deg)";
+            btn.style.transition = "1s";
 
             fetch(SCRIPT_URL)
             .then(res => res.json())
             .then(data => {
                 fetchedOrders = data;
                 dropdown.innerHTML = '<option value="">-- Select Order --</option>';
-                
+
                 if(data.length === 0) {
                     dropdown.innerHTML = '<option>No orders found</option>';
                     return;
                 }
 
+                // Group orders by Date
+                const grouped = {};
+                
                 data.forEach(order => {
-                    // Show: "#1 - Rahul (₹500)"
-                    const option = document.createElement("option");
-                    option.value = order.id;
-                    option.text = `${order.id} - ${order.name} (Total: ₹${order.total})`;
-                    dropdown.appendChild(option);
+                    // Convert date string to readable format (e.g., "24 Nov 2025")
+                    const d = new Date(order.date);
+                    const dateKey = isNaN(d) ? "Others" : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                    
+                    if(!grouped[dateKey]) grouped[dateKey] = [];
+                    grouped[dateKey].push(order);
                 });
+
+                // Create Optgroups
+                for (const [dateLabel, orders] of Object.entries(grouped)) {
+                    const group = document.createElement("optgroup");
+                    group.label = dateLabel; // e.g., "24 Nov 2025"
+
+                    orders.forEach(order => {
+                        const option = document.createElement("option");
+                        option.value = order.id;
+                        // Format: "#1 - Amit (₹500)"
+                        option.text = `${order.id} - ${order.name} (₹${order.total})`;
+                        group.appendChild(option);
+                    });
+
+                    dropdown.appendChild(group);
+                }
+                btn.style.transform = "rotate(0deg)";
             })
             .catch(err => {
                 console.error(err);
                 dropdown.innerHTML = "<option>Error loading</option>";
-                alert("Failed to connect. Check URL.");
+                alert("Connection Failed. Check URL.");
             });
         }
 
-        // --- 2. Load Selected Order into Form ---
+        // --- 2. AUTO FILL FORM ---
         function loadSelectedOrder() {
             const selectedId = document.getElementById("order-dropdown").value;
-            if(!selectedId) return alert("Select an Order ID first");
+            if(!selectedId) return;
 
             const order = fetchedOrders.find(o => o.id === selectedId);
+            
             if(order) {
-                // Fill details
+                // Fill Order ID & Date
                 document.getElementById("in_number").value = order.id;
-                document.getElementById("in_client_name").value = order.name;
-                document.getElementById("in_client_addr").value = order.address + "\nPhone: " + order.phone;
-                
-                // Set Date
                 const d = new Date(order.date);
-                if(!isNaN(d)) {
-                    document.getElementById("in_date").value = d.toISOString().split('T')[0];
-                }
+                if(!isNaN(d)) document.getElementById("in_date").value = d.toISOString().split('T')[0];
 
-                // Process Items string: "Shirt (x2), Pant (x1)"
-                document.getElementById("items-container").innerHTML = ""; // Clear list
-                
-                const itemsArray = order.items.split(', '); 
-                
-                itemsArray.forEach(itemStr => {
-                    // Try to split Name and Qty
-                    // Regex looks for "Product Name (x5)" pattern
-                    const match = itemStr.match(/(.*) \(x(\d+)\)/);
+                // Fill Customer Details
+                document.getElementById("in_client_name").value = order.name;
+                document.getElementById("in_client_addr").value = `${order.address}\nPhone: ${order.phone}`;
+
+                // Fill Items (Parser)
+                // Expected format: "Item A (x2), Item B (x1)"
+                const container = document.getElementById("items-container");
+                container.innerHTML = ""; // Clear old items
+
+                if(order.items) {
+                    const itemsArray = order.items.split(', ');
                     
-                    let name = itemStr;
-                    let qty = 1;
+                    itemsArray.forEach(itemStr => {
+                        // Regex to extract Name and Qty: "Shirt (x2)" -> Name: Shirt, Qty: 2
+                        const match = itemStr.match(/(.*) \(x(\d+)\)/);
+                        
+                        let name = itemStr;
+                        let qty = 1;
+                        let price = 0;
 
-                    if(match) {
-                        name = match[1];
-                        qty = match[2];
-                    }
+                        if(match) {
+                            name = match[1];
+                            qty = parseInt(match[2]);
+                        }
 
-                    // Price is set to 0 initially because Sheet only has Grand Total
-                    addItemRow(name, 0, qty); 
-                });
+                        // Smart Logic: If only 1 item type exists, we can calculate price from Total
+                        if(itemsArray.length === 1 && qty > 0) {
+                            price = order.total / qty;
+                        }
 
+                        addItemRow(name, price, qty);
+                    });
+                }
+                
+                // Trigger update to refresh preview
                 updateInvoice();
-                alert("Order Loaded!\n\n⚠️ Price Note: Item prices are set to 0. Please enter the correct unit price for each item.");
             }
         }
 
-        // --- 3. Invoice Functions ---
+        // --- 3. INVOICE LOGIC ---
         function addItemRow(name = '', price = 0, qty = 1) {
             const container = document.getElementById('items-container');
             const div = document.createElement('div');
             div.className = 'item-row';
             div.innerHTML = `
-                <input type="text" placeholder="Item" class="i_name" oninput="updateInvoice()" value="${name}">
-                <div style="display:flex; gap:5px; margin-top:5px;">
-                    <input type="number" placeholder="Price" class="i_cost" value="${price}" oninput="updateInvoice()" style="width:40%;">
-                    <input type="number" placeholder="Qty" class="i_qty" value="${qty}" oninput="updateInvoice()" style="width:30%;">
-                    <button class="btn btn-remove" onclick="this.parentElement.parentElement.remove(); updateInvoice()" style="width:30%; margin:0; padding:0; font-size:12px;">Del</button>
+                <input type="text" placeholder="Item Name" class="i_name" value="${name}" oninput="updateInvoice()">
+                <div class="row-inputs">
+                    <input type="number" placeholder="Price" class="i_cost" value="${price}" oninput="updateInvoice()">
+                    <input type="number" placeholder="Qty" class="i_qty" value="${qty}" oninput="updateInvoice()">
+                    <button class="btn btn-remove" style="width:auto; margin:0;" onclick="this.parentElement.parentElement.remove(); updateInvoice()">X</button>
                 </div>
             `;
             container.appendChild(div);
@@ -354,46 +303,50 @@
         }
 
         function updateInvoice() {
+            // Update Text Fields
             document.getElementById('out_number').innerText = document.getElementById('in_number').value;
             document.getElementById('out_date').innerText = formatDate(document.getElementById('in_date').value);
-            document.getElementById('out_client_name').innerText = document.getElementById('in_client_name').value;
-            document.getElementById('out_client_addr').innerText = document.getElementById('in_client_addr').value;
+            document.getElementById('out_client_name').innerText = document.getElementById('in_client_name').value || "Customer Name";
+            document.getElementById('out_client_addr').innerText = document.getElementById('in_client_addr').value || "Address";
 
-            const itemRows = document.querySelectorAll('.item-row');
+            // Update Table
+            const rows = document.querySelectorAll('.item-row');
             const tbody = document.getElementById('invoice-items');
             tbody.innerHTML = '';
+            
+            let grandTotal = 0;
 
-            let subtotal = 0;
-
-            itemRows.forEach(row => {
+            rows.forEach(row => {
                 const name = row.querySelector('.i_name').value;
-                const cost = parseFloat(row.querySelector('.i_cost').value) || 0;
+                const price = parseFloat(row.querySelector('.i_cost').value) || 0;
                 const qty = parseFloat(row.querySelector('.i_qty').value) || 0;
-                const amount = cost * qty;
-                subtotal += amount;
+                const total = price * qty;
+                grandTotal += total;
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><div style="font-weight:bold;">${name}</div></td>
-                    <td>₹${cost}</td>
-                    <td>${qty}</td>
-                    <td>₹${amount}</td>
-                `;
-                tbody.appendChild(tr);
+                if(name || price || qty) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><div style="font-weight:bold;">${name}</div></td>
+                        <td class="text-right">₹${price}</td>
+                        <td class="text-right">${qty}</td>
+                        <td class="text-right">₹${total}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
             });
 
-            document.getElementById('out_grand_total').innerText = "₹" + subtotal.toFixed(2);
+            document.getElementById('out_grand_total').innerText = "₹" + grandTotal.toFixed(2);
         }
 
-        function formatDate(dateString) {
-            if(!dateString) return '';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-IN');
+        function formatDate(dateStr) {
+            if(!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-IN');
         }
 
-        // Initialize: Add one empty row & Fetch Orders
-        addItemRow();
-        fetchOrders(); 
+        // Start
+        fetchOrders();
+        addItemRow(); // One empty row default
     </script>
 </body>
 </html>
