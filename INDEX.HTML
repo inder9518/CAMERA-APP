@@ -3,109 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto Bill Generator</title>
+    <title>Smart Invoice Generator</title>
     <style>
-        /* --- General Layout --- */
-        body { font-family: 'Segoe UI', sans-serif; background-color: #e0e0e0; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* --- Left Side: Form --- */
-        .form-container { width: 35%; background: white; padding: 20px; height: 100%; overflow-y: auto; box-sizing: border-box; border-top: 5px solid #1e88e5; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #555; }
-        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        .item-row { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #f9f9f9; border-radius: 6px; display: flex; flex-direction: column; gap: 5px; }
-        .row-inputs { display: flex; gap: 5px; }
-        .btn { padding: 10px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; width: 100%; margin-top: 5px; }
-        .btn-add { background-color: #28a745; }
-        .btn-remove { background-color: #ff4d4d; }
-        .btn-print { background-color: #1e88e5; margin-top: 20px; font-size: 16px; padding: 15px; }
-        .fetch-box { background-color: #e3f2fd; border: 1px solid #90caf9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .status-text { font-size: 11px; color: #666; margin-top: 5px; text-align: right; display: block;}
-        select optgroup { font-weight: bold; color: #1e88e5; }
+        /* --- 1. GLOBAL RESET --- */
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; 
+            padding: 0; 
+            height: 100vh; 
+            display: flex;
+            overflow: hidden; /* PC pe scroll na aaye */
+        }
 
-        /* --- Right Side: Preview --- */
-        .preview-wrapper { width: 65%; background: #525659; overflow-y: auto; padding: 20px; display: flex; justify-content: center; }
-        .invoice-paper { background: white; width: 100%; max-width: 21cm; min-height: 29.7cm; box-shadow: 0 0 20px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
-        .inv-header { background-color: #1e88e5; color: white; padding: 30px; text-align: right; }
-        .inv-header h1 { margin: 0; font-size: 32px; letter-spacing: 2px; }
-        .inv-body { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; }
-        .shop-info { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .client-meta { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .meta-right { text-align: right; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; color: #1e88e5; border-bottom: 2px solid #1e88e5; padding: 8px; font-size: 12px; }
-        td { padding: 10px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
-        .text-right { text-align: right; }
-        .total-box { margin-top: 20px; align-self: flex-end; width: 250px; font-size: 18px; font-weight: bold; color: #1e88e5; border-top: 2px solid #eee; padding-top: 10px; display: flex; justify-content: space-between; }
+        /* --- 2. LAYOUT (PC View) --- */
+        .main-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- LEFT SIDE: EDITOR --- */
+        .editor-panel {
+            width: 350px;
+            flex-shrink: 0;
+            background: white;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* --- RIGHT SIDE: PREVIEW --- */
+        .preview-panel {
+            flex-grow: 1;
+            background: #525659;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        /* --- FORM STYLES --- */
+        .form-section h2 { margin: 0 0 15px 0; color: #1e88e5; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        label { font-size: 12px; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        input:focus, textarea:focus, select:focus { border-color: #1e88e5; outline: none; }
         
-        @media print { body { display: block; height: auto; } .form-container { display: none; } .preview-wrapper { width: 100%; padding: 0; display: block; } .invoice-paper { box-shadow: none; } }
+        .item-list { display: flex; flex-direction: column; gap: 8px; }
+        .item-input-row { display: flex; gap: 5px; background: #f9f9f9; padding: 8px; border: 1px solid #eee; border-radius: 4px; }
+        
+        /* Buttons */
+        .btn { border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; width: 100%; }
+        .btn-green { background-color: #28a745; margin-top: 10px; }
+        .btn-blue { background-color: #1e88e5; margin-top: 20px; font-size: 16px; }
+        .btn-red { background-color: #dc3545; width: auto; padding: 5px 10px; font-size: 12px; }
+        
+        /* Fetch Box */
+        .fetch-box { background: #e3f2fd; padding: 10px; border-radius: 6px; border: 1px solid #90caf9; }
+
+        /* --- 3. THE INVOICE PAPER (A4 Logic) --- */
+        .paper {
+            background: white;
+            width: 210mm; /* Exact A4 Width */
+            min-height: 297mm; /* Exact A4 Height */
+            padding: 15mm; /* Standard Margins */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Invoice Internal Design */
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1e88e5; padding-bottom: 15px; margin-bottom: 20px; }
+        .company-name { font-size: 28px; font-weight: bold; color: #1e88e5; text-transform: uppercase; }
+        .invoice-title { font-size: 32px; font-weight: 300; color: #333; }
+        
+        .details-grid { display: flex; justify-content: space-between; margin-bottom: 30px; }
+        .client-box h3, .meta-box h3 { font-size: 12px; color: #888; text-transform: uppercase; margin: 0 0 5px 0; }
+        .client-val { font-weight: bold; font-size: 14px; }
+        .client-addr { font-size: 13px; white-space: pre-wrap; line-height: 1.4; color: #444; }
+
+        /* Table */
+        .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .inv-table th { background: #1e88e5; color: white; padding: 8px; text-align: left; font-size: 12px; text-transform: uppercase; }
+        .inv-table td { padding: 10px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .text-right { text-align: right; }
+        
+        /* Total */
+        .total-section { align-self: flex-end; width: 200px; }
+        .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; }
+        .grand-total { font-size: 18px; font-weight: bold; color: #1e88e5; border-top: 2px solid #ddd; padding-top: 5px; }
+
+        /* Footer */
+        .footer { margin-top: auto; padding-top: 40px; display: flex; justify-content: space-between; }
+        .sign-box { text-align: center; width: 150px; border-top: 1px solid #aaa; padding-top: 5px; font-size: 12px; color: #666; }
+
+        /* --- 4. RESPONSIVE DESIGN (Mobile) --- */
+        @media (max-width: 768px) {
+            body { overflow: auto; height: auto; }
+            .main-container { flex-direction: column; }
+            .editor-panel { width: 100%; border-right: none; border-bottom: 2px solid #1e88e5; height: auto; }
+            .preview-panel { padding: 10px; background: #ddd; }
+            .paper { width: 100%; min-height: auto; padding: 10px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+
+        /* --- 5. PRINT SETTINGS (Perfect A4) --- */
+        @media print {
+            @page { size: A4; margin: 0; } /* Remove Browser Margins */
+            body { 
+                background: white; 
+                height: auto; 
+                overflow: visible; 
+                display: block; 
+            }
+            .editor-panel { display: none !important; } /* Hide Editor */
+            .preview-panel { 
+                padding: 0; 
+                margin: 0; 
+                background: white; 
+                width: 100%; 
+                display: block; 
+                overflow: visible;
+            }
+            .paper {
+                width: 100%;
+                max-width: 100%;
+                box-shadow: none;
+                margin: 0;
+                padding: 10mm; /* Print Margin */
+                border: none;
+                min-height: 290mm; /* Force Full Page */
+            }
+            /* Ensure table rows don't break weirdly */
+            tr { page-break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="form-container">
-        <div class="fetch-box">
-            <h3 style="margin:0 0 10px 0; color:#1565c0;">📅 Select Order (Date Wise)</h3>
-            <div style="display:flex; gap:10px;">
+    <div class="main-container">
+        
+        <div class="editor-panel">
+            
+            <div class="fetch-box">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <strong style="color:#1565c0; font-size:14px;">📅 Auto-Load Order</strong>
+                    <button onclick="init()" style="border:none; background:transparent; cursor:pointer;">🔄</button>
+                </div>
                 <select id="order-dropdown" onchange="loadSelectedOrder()">
-                    <option value="">Connecting...</option>
+                    <option value="">Initializing...</option>
                 </select>
-                <button onclick="init()" style="border:none; background:transparent; cursor:pointer;" title="Refresh">🔄</button>
+                <div id="db-status" style="font-size:11px; color:#666; text-align:right; margin-top:3px;">Connecting...</div>
             </div>
-            <span class="status-text" id="db-status">Initializing...</span>
+
+            <div class="form-section">
+                <h2>📝 Invoice Details</h2>
+                <div class="form-group">
+                    <label>Invoice No.</label>
+                    <input type="text" id="in_number" value="#1" oninput="updateInvoice()">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="in_date" oninput="updateInvoice()">
+                </div>
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" id="in_client_name" oninput="updateInvoice()">
+                </div>
+                <div class="form-group">
+                    <label>Address / Phone</label>
+                    <textarea id="in_client_addr" rows="2" oninput="updateInvoice()"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>📦 Items</h2>
+                <div id="items-input-container" class="item-list"></div>
+                <button class="btn btn-green" onclick="addItemRow()">+ Add Item</button>
+            </div>
+
+            <button class="btn btn-blue" onclick="window.print()">🖨️ Print Invoice</button>
         </div>
 
-        <h2 style="margin:0 0 15px 0; font-size:18px; border-bottom:2px solid #eee; padding-bottom:10px;">📝 Invoice Details</h2>
-        <div class="form-group"><label>Invoice No.</label><input type="text" id="in_number" value="#1" oninput="updateInvoice()"></div>
-        <div class="form-group"><label>Date</label><input type="date" id="in_date" oninput="updateInvoice()"></div>
-        <div class="form-group"><label>Customer Name</label><input type="text" id="in_client_name" oninput="updateInvoice()"></div>
-        <div class="form-group"><label>Address / Phone</label><textarea id="in_client_addr" rows="3" oninput="updateInvoice()"></textarea></div>
-
-        <h3 style="margin:15px 0 10px 0; font-size:14px;">Items List</h3>
-        <div id="items-container"></div>
-        <button class="btn btn-add" onclick="addItemRow()">+ Add Item Manually</button>
-        <button class="btn btn-print" onclick="window.print()">🖨️ Print / Save PDF</button>
-    </div>
-
-    <div class="preview-wrapper">
-        <div class="invoice-paper">
-            <div class="inv-header"><h1>INVOICE</h1></div>
-            <div class="inv-body">
-                <div class="shop-info">
-                    <div style="font-size:20px; font-weight:bold; color:#1e88e5;">TECHDROIDE</div>
-                    <div style="font-size:13px;">Online Store & Accessories</div>
-                    <div style="font-size:13px;">Phone: +91 9518843849</div>
-                </div>
-                <div class="client-meta">
-                    <div>
-                        <div style="font-size:11px; color:#888;">Bill To</div>
-                        <div id="out_client_name" style="font-weight:bold; font-size:15px;">Name</div>
-                        <div id="out_client_addr" style="font-size:13px;">Address</div>
-                    </div>
-                    <div class="meta-right">
-                        <div style="font-size:11px; color:#888;">Invoice #</div>
-                        <div id="out_number" style="font-weight:bold; margin-bottom:10px;">#1</div>
-                        <div style="font-size:11px; color:#888;">Date</div>
-                        <div id="out_date">--/--/----</div>
-                    </div>
-                </div>
-                <table>
-                    <thead><tr><th width="50%">Item</th><th width="15%" class="text-right">Price</th><th width="10%" class="text-right">Qty</th><th width="25%" class="text-right">Amount</th></tr></thead>
-                    <tbody id="invoice-items"></tbody>
-                </table>
-                <div class="total-box"><span>Total</span><span id="out_grand_total">₹0.00</span></div>
+        <div class="preview-panel">
+            <div class="paper">
                 
-                <div style="margin-top:auto; padding-top:40px; display:flex; justify-content:space-between;">
-                    <div style="text-align:center;"><div style="border-top:1px solid #ccc; width:120px; padding-top:5px; font-size:11px; color:#888;">Customer Signature</div></div>
-                    <div style="text-align:center;"><div style="border-top:1px solid #ccc; width:120px; padding-top:5px; font-size:11px; color:#888;">Authorized Signatory</div></div>
+                <div class="header">
+                    <div>
+                        <div class="company-name" contenteditable="true">TECHDROIDE</div>
+                        <div style="font-size:13px; color:#555;" contenteditable="true">Online Store & Accessories</div>
+                        <div style="font-size:13px; color:#555;" contenteditable="true">Phone: +91 9518843849</div>
+                    </div>
+                    <div class="invoice-title">INVOICE</div>
                 </div>
+
+                <div class="details-grid">
+                    <div class="client-box">
+                        <h3>Bill To:</h3>
+                        <div class="client-val" id="out_client_name">Name</div>
+                        <div class="client-addr" id="out_client_addr">Address</div>
+                    </div>
+                    <div class="meta-box" style="text-align:right;">
+                        <h3>Invoice Details:</h3>
+                        <div>Invoice #: <strong id="out_number">#1</strong></div>
+                        <div>Date: <strong id="out_date">--/--/----</strong></div>
+                    </div>
+                </div>
+
+                <table class="inv-table">
+                    <thead>
+                        <tr>
+                            <th width="50%">Description</th>
+                            <th width="15%" class="text-right">Price</th>
+                            <th width="10%" class="text-right">Qty</th>
+                            <th width="25%" class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items-body"></tbody>
+                </table>
+
+                <div class="total-section">
+                    <div class="total-row grand-total">
+                        <span>Total:</span>
+                        <span id="out_grand_total">₹0.00</span>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <div class="sign-box">Customer Signature</div>
+                    <div class="sign-box">Authorized Signatory</div>
+                </div>
+
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // ⚠️ PASTE YOUR GOOGLE WEB APP URL HERE
+        // ⚠️ PASTE YOUR SCRIPT URL HERE
         // ============================================
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgHBpK_fx91pPwnWrommG57NbilZToT3HydsawtS8GF0OWh8kQWWEGdR0f5WQF1632/exec"; 
 
@@ -119,15 +259,13 @@
             fetch(SCRIPT_URL + "?type=products")
             .then(res => res.json())
             .then(data => {
-                allProducts = data; // Store products [ {name: "shirt", price: 500}, ... ]
-                document.getElementById("db-status").innerText = "Products Loaded. Fetching Orders...";
+                allProducts = data;
+                document.getElementById("db-status").innerText = "Loading Orders...";
                 fetchOrders();
             })
             .catch(err => {
-                console.error("Prod Error", err);
-                document.getElementById("db-status").innerText = "⚠️ Products Load Failed (Check Access)";
-                // Even if products fail, fetch orders
-                fetchOrders();
+                console.log(err);
+                fetchOrders(); // Continue even if products fail
             });
         }
 
@@ -146,7 +284,7 @@
                 const grouped = {};
                 data.forEach(order => {
                     const d = new Date(order.date);
-                    const dateKey = isNaN(d) ? "Recent" : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                    const dateKey = isNaN(d) ? "Others" : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
                     if(!grouped[dateKey]) grouped[dateKey] = [];
                     grouped[dateKey].push(order);
                 });
@@ -164,64 +302,53 @@
                 }
                 document.getElementById("db-status").innerText = "✅ Ready";
             })
-            .catch(err => {
-                console.error(err);
-                document.getElementById("db-status").innerText = "❌ Connection Failed";
-            });
+            .catch(err => document.getElementById("db-status").innerText = "❌ Failed");
         }
 
-        // 3. AUTO FILL LOGIC (Simplified)
+        // 3. Load Order Logic
         function loadSelectedOrder() {
             const selectedId = document.getElementById("order-dropdown").value;
             if(!selectedId) return;
 
             const order = fetchedOrders.find(o => o.id === selectedId);
             if(order) {
-                // Clear existing items
-                document.getElementById("items-container").innerHTML = "";
+                // Clear inputs
+                document.getElementById("items-input-container").innerHTML = "";
 
-                // Fill Details
+                // Fill Info
                 document.getElementById("in_number").value = order.id;
                 const d = new Date(order.date);
                 if(!isNaN(d)) document.getElementById("in_date").value = d.toISOString().split('T')[0];
                 document.getElementById("in_client_name").value = order.name;
                 document.getElementById("in_client_addr").value = `${order.address}\nPhone: ${order.phone}`;
 
-                // --- PARSING ITEMS ---
-                // Format could be: "Shirt (x2), Pant" OR "Shirt (x2)" OR "Shirt"
+                // Parse Items
                 if(order.items) {
-                    // 1. Split by comma
                     let rawItems = order.items.split(',');
-
                     rawItems.forEach(raw => {
-                        raw = raw.trim(); // Remove spaces
+                        raw = raw.trim();
                         if(!raw) return;
 
                         let name = raw;
                         let qty = 1;
 
-                        // 2. Check for (xNumber)
-                        // Example: "Shirt (x2)"
+                        // Check (x2)
                         if (raw.includes("(x")) {
                             let parts = raw.split("(x");
-                            name = parts[0].trim(); // "Shirt"
-                            // Remove closing bracket from "2)"
+                            name = parts[0].trim();
                             let qtyPart = parts[1].replace(")", "").trim();
                             qty = parseInt(qtyPart) || 1;
                         }
 
-                        // 3. Find Price from Product List
+                        // Find Price
                         let price = 0;
                         const product = allProducts.find(p => p.name.toLowerCase() === name.toLowerCase());
-                        if(product) {
-                            price = product.price;
-                        } else {
-                            // If exact match fails, try partial match
+                        if(product) price = product.price;
+                        else {
                             const partial = allProducts.find(p => name.toLowerCase().includes(p.name.toLowerCase()));
                             if(partial) price = partial.price;
                         }
 
-                        // 4. Add Row
                         addItemRow(name, price, qty);
                     });
                 }
@@ -229,18 +356,16 @@
             }
         }
 
-        // --- INVOICE FUNCTIONS ---
+        // 4. UI Functions
         function addItemRow(name = '', price = 0, qty = 1) {
-            const container = document.getElementById('items-container');
+            const container = document.getElementById('items-input-container');
             const div = document.createElement('div');
-            div.className = 'item-row';
+            div.className = 'item-input-row';
             div.innerHTML = `
-                <input type="text" placeholder="Item Name" class="i_name" value="${name}" oninput="updateInvoice()">
-                <div class="row-inputs">
-                    <input type="number" placeholder="Price" class="i_cost" value="${price}" oninput="updateInvoice()">
-                    <input type="number" placeholder="Qty" class="i_qty" value="${qty}" oninput="updateInvoice()">
-                    <button class="btn btn-remove" style="width:auto; margin:0;" onclick="this.parentElement.parentElement.remove(); updateInvoice()">X</button>
-                </div>
+                <div style="flex:2;"><input type="text" class="i_name" value="${name}" oninput="updateInvoice()" placeholder="Item"></div>
+                <div style="flex:1;"><input type="number" class="i_cost" value="${price}" oninput="updateInvoice()" placeholder="Price"></div>
+                <div style="flex:0.5;"><input type="number" class="i_qty" value="${qty}" oninput="updateInvoice()" placeholder="Qty"></div>
+                <div style="flex:0.3;"><button class="btn btn-red" onclick="this.parentElement.parentElement.remove(); updateInvoice()">X</button></div>
             `;
             container.appendChild(div);
             updateInvoice();
@@ -252,10 +377,9 @@
             document.getElementById('out_client_name').innerText = document.getElementById('in_client_name').value || "Customer Name";
             document.getElementById('out_client_addr').innerText = document.getElementById('in_client_addr').value || "Address";
 
-            const rows = document.querySelectorAll('.item-row');
-            const tbody = document.getElementById('invoice-items');
+            const rows = document.querySelectorAll('.item-input-row');
+            const tbody = document.getElementById('invoice-items-body');
             tbody.innerHTML = '';
-            
             let grandTotal = 0;
 
             rows.forEach(row => {
@@ -268,7 +392,7 @@
                 if(name) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><div style="font-weight:bold;">${name}</div></td>
+                        <td>${name}</td>
                         <td class="text-right">₹${price}</td>
                         <td class="text-right">${qty}</td>
                         <td class="text-right">₹${total}</td>
@@ -287,7 +411,7 @@
         }
 
         init();
-        addItemRow(); // default row
+        addItemRow();
     </script>
 </body>
 </html>
